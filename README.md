@@ -208,6 +208,65 @@ APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
 
 ---
 
+## 📝 更新日志
+
+### v1.5 — 2025-04-24
+
+**🔧 修复**
+- 修复实时预览画面不显示 — 通过 Binder 将 PreviewView 的 SurfaceProvider 传递给 Service
+- 修复停止录制闪退 — 添加 3 秒超时保底机制，防止 Finalize 事件未触发
+- 修复视频无法播放 — 等待 Finalize 回调确认文件写入完成后再清理相机资源
+- 修复相机初始化失败 — ProcessCameraProvider.getInstance() 改为主线程调用
+- 修复 Camera2Interop API 兼容性 — 使用 setCaptureRequestOption 替代不存在的 API
+
+**✨ 新功能**
+- 三种显示模式：实时预览 / 录制状态 / 空白（设置中切换）
+- 帧率控制：自动 / 30 FPS / 60 FPS / 120 FPS
+- 设置按钮移至右上角
+- 通过 Camera2Interop 设置底层帧率（CONTROL_AE_TARGET_FPS_RANGE）
+
+**📄 文档**
+- README 全面重写，添加架构图、技术栈表格、权限说明
+- 添加 LICENSE 文件（MIT + 非盈利条款）
+
+### v1.4 — 2025-04-23
+
+**🔧 修复**
+- 修复存储路径问题 — 改用公共 Download/xcodx/ 目录
+- 修复 Android 11+ 存储权限 — 添加 MANAGE_EXTERNAL_STORAGE 权限和设置页跳转
+
+**✨ 新功能**
+- 主界面显示存储路径和打开文件夹按钮
+
+### v1.3 — 2025-04-23
+
+**🔧 修复**
+- 修复录制启动失败 — 替换 LifecycleService 为 Service + 手动 LifecycleOwner
+- 添加 FallbackStrategy 质量降级策略
+- 添加 foregroundServiceType 声明（Android 14+ 兼容）
+- 添加 FOREGROUND_SERVICE_MICROPHONE 权限
+
+### v1.2 — 2025-04-22
+
+**🔧 修复**
+- 修复 RecordingService 编译错误
+- 修复 onBind 与 LifecycleService 冲突
+
+### v1.1 — 2025-04-22
+
+**🔧 修复**
+- 修复 CI 构建配置
+
+### v1.0 — 2025-04-22
+
+**🎉 首次发布**
+- 后台视频录制（ForegroundService + CameraX）
+- 前置/后置摄像头切换
+- 多分辨率选择（480p / 720p / 1080p）
+- GitHub Actions 自动构建
+
+---
+
 ## 📄 License
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
