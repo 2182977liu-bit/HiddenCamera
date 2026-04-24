@@ -104,13 +104,12 @@ class SettingsActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val shortcutManager = getSystemService(android.content.pm.ShortcutManager::class.java)
             if (shortcutManager.isRequestPinShortcutSupported) {
-                val toggleIntent = Intent(this, RecordingService::class.java).apply {
-                    action = RecordingService.ACTION_TOGGLE
+                // Pinned Shortcut 的 setIntent 需要 Intent（不是 PendingIntent）
+                // 使用一个隐式 Intent，通过 MainActivity 来中转处理
+                val shortcutIntent = Intent(this, MainActivity::class.java).apply {
+                    action = "com.example.hiddencamera.ACTION_TOGGLE_RECORDING"
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                val pendingIntent = PendingIntent.getService(
-                    this, 1, toggleIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
 
                 val shortcut = android.content.pm.ShortcutInfo.Builder(this, "quick_record")
                     .setShortLabel("快速录制")
@@ -120,7 +119,7 @@ class SettingsActivity : AppCompatActivity() {
                             this, android.R.drawable.ic_menu_camera
                         )
                     )
-                    .setIntent(pendingIntent)
+                    .setIntent(shortcutIntent)
                     .build()
 
                 shortcutManager.requestPinShortcut(shortcut, null)
