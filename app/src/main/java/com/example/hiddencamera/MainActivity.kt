@@ -6,18 +6,23 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.google.android.material.button.MaterialButton
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var btnRecord: MaterialButton
     private lateinit var btnSettings: MaterialButton
+    private lateinit var tvStoragePath: TextView
     private var isRecording = false
 
     private val recordingReceiver = object : BroadcastReceiver() {
@@ -51,6 +56,17 @@ class MainActivity : AppCompatActivity() {
 
         btnRecord = findViewById(R.id.btnRecord)
         btnSettings = findViewById(R.id.btnSettings)
+        tvStoragePath = findViewById(R.id.tvStoragePath)
+        val btnOpenFolder = findViewById<MaterialButton>(R.id.btnOpenFolder)
+
+        // 显示存储路径
+        val videoDir = getVideoDir()
+        tvStoragePath.text = videoDir.absolutePath
+
+        // 打开文件夹
+        btnOpenFolder.setOnClickListener {
+            openFolder(videoDir)
+        }
 
         btnRecord.setOnClickListener {
             if (isRecording) {
@@ -81,6 +97,47 @@ class MainActivity : AppCompatActivity() {
         try {
             unregisterReceiver(recordingReceiver)
         } catch (_: Exception) {}
+    }
+
+    private fun getVideoDir(): File {
+        val base = getExternalFilesDir(null) ?: filesDir
+        val dir = File(base, "videos")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    private fun openFolder(dir: File) {
+        try {
+            if (!dir.exists()) {
+                Toast.makeText(this, "文件夹不存在", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val uri = FileProvider.getUriForFile(
+                this,
+                "${packageName}.fileprovider",
+                dir
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "resource/folder")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            // FileProvider 方式失败，尝试用 SAF
+            try {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setData(Uri.parse(dir.absolutePath))
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } catch (e2: Exception) {
+                // 最终回退：复制路径到剪贴板
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("path", dir.absolutePath))
+                Toast.makeText(this, "已复制路径到剪贴板:\n${dir.absolutePath}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun checkPermissionsAndStart() {
@@ -137,13 +194,13 @@ class MainActivity : AppCompatActivity() {
             btnRecord.setBackgroundColor(getColor(R.color.recording_red))
             findViewById<android.view.View>(R.id.indicator)
                 .setBackgroundResource(R.drawable.indicator_recording)
-            findViewById<android.widget.TextView>(R.id.tvStatus).text = "录制状态：录制中..."
+            findViewById<TextView>(R.id.tvStatus).text = "录制状态：录制中..."
         } else {
             btnRecord.text = getString(R.string.start_recording)
             btnRecord.setBackgroundColor(getColor(R.color.primary))
             findViewById<android.view.View>(R.id.indicator)
                 .setBackgroundResource(R.drawable.indicator_idle)
-            findViewById<android.widget.TextView>(R.id.tvStatus).text = getString(R.string.recording_status)
+            findViewById<TextView>(R.id.tvStatus).text = getString(R.string.recording_status)
         }
     }
 }
