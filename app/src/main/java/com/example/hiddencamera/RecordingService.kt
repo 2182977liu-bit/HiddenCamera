@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -32,7 +33,11 @@ class RecordingService : Service(), LifecycleOwner {
         private const val NOTIFICATION_ID = 1
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
-        const val EXTRA_OUTPUT_PATH = "output_path"
+
+        // 公共 Download/xcodx/ 目录
+        private fun getOutputDir(): File {
+            return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "xcodx")
+        }
     }
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -45,6 +50,7 @@ class RecordingService : Service(), LifecycleOwner {
     private var videoCapture: VideoCapture<Recorder>? = null
     private var activeRecording: Recording? = null
     private var isRecording = false
+    private var isStopping = false
     private lateinit var cameraExecutor: ExecutorService
 
     override fun onCreate() {
@@ -60,26 +66,28 @@ class RecordingService : Service(), LifecycleOwner {
                 ACTION_START -> {
                     startForegroundNotification()
                     lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-                    val outputPath = intent.getStringExtra(EXTRA_OUTPUT_PATH)
-                    startRecording(outputPath)
+                    startRecording()
                 }
                 ACTION_STOP -> {
-                    stopRecording()
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
+                    requestStopRecording()
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "onStartCommand 异常", e)
             notifyError("启动失败: ${e.message}")
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            safeStopSelf()
         }
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        stopRecording()
+        // onDestroy 中只做最安全的清理，不调用 activeRecording.stop()
+        // 因为 stop() 会触发 Finalize 回调，在销毁过程中可能崩溃
+        activeRecording = null
+        videoCapture = null
+        try {
+            cameraProvider?.unbindAll()
+        } catch (_: Exception) {}
         cameraProvider = null
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         cameraExecutor.shutdown()
@@ -123,11 +131,9 @@ class RecordingService : Service(), LifecycleOwner {
         }
     }
 
-    private fun startRecording(outputPath: String?) {
+    private fun startRecording() {
         try {
-            val storagePath = outputPath ?: getExternalFilesDir(null)?.absolutePath
-                ?: filesDir.absolutePath
-            val outputDir = File(storagePath, "videos")
+            val outputDir = getOutputDir()
             if (!outputDir.exists()) {
                 val created = outputDir.mkdirs()
                 if (!created) {
@@ -136,6 +142,7 @@ class RecordingService : Service(), LifecycleOwner {
                 }
             }
 
+            // 创建 .nomedia 文件，防止相册扫描
             try {
                 val nomediaFile = File(outputDir, ".nomedia")
                 if (!nomediaFile.exists()) {
@@ -162,7 +169,7 @@ class RecordingService : Service(), LifecycleOwner {
                             Log.e(TAG, "获取 CameraProvider 失败", e)
                             notifyError("相机初始化失败: ${e.message}")
                         }
-                    }, ContextCompat.getMainExecutor(this)) // 使用主线程 Executor
+                    }, ContextCompat.getMainExecutor(this))
                 } catch (e: Exception) {
                     Log.e(TAG, "ProcessCameraProvider.getInstance 失败", e)
                     notifyError("相机初始化失败: ${e.message}")
@@ -236,6 +243,7 @@ class RecordingService : Service(), LifecycleOwner {
                     when (event) {
                         is VideoRecordEvent.Start -> {
                             isRecording = true
+                            isStopping = false
                             Log.d(TAG, "录制开始: ${outputFile.absolutePath}")
                             sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STARTED"))
                         }
@@ -248,7 +256,15 @@ class RecordingService : Service(), LifecycleOwner {
                             } else {
                                 Log.d(TAG, "录制完成: ${outputFile.absolutePath}")
                             }
+                            activeRecording = null
                             sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STOPPED"))
+
+                            // 录制完全结束后再清理相机资源并停止服务
+                            if (isStopping) {
+                                mainHandler.post {
+                                    cleanupAndStop()
+                                }
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -257,20 +273,48 @@ class RecordingService : Service(), LifecycleOwner {
             }
     }
 
-    private fun stopRecording() {
+    /**
+     * 请求停止录制 — 只调用 stop()，等待 Finalize 回调后再清理
+     */
+    private fun requestStopRecording() {
+        if (!isRecording && activeRecording == null) {
+            // 没有在录制，直接停止服务
+            safeStopSelf()
+            return
+        }
+
+        isStopping = true
         try {
             activeRecording?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "停止录制时异常", e)
+            // stop 失败时直接清理
+            activeRecording = null
+            cleanupAndStop()
         }
-        activeRecording = null
+    }
+
+    /**
+     * 安全清理并停止服务 — 在 Finalize 回调后调用
+     */
+    private fun cleanupAndStop() {
         videoCapture = null
         try {
             cameraProvider?.unbindAll()
         } catch (e: Exception) {
             Log.w(TAG, "解绑相机时异常", e)
         }
+        cameraProvider = null
         isRecording = false
+        isStopping = false
+        safeStopSelf()
+    }
+
+    private fun safeStopSelf() {
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (_: Exception) {}
+        stopSelf()
     }
 
     private fun notifyError(message: String) {
