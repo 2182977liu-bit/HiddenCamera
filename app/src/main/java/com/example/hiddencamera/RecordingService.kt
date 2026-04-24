@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
+import android.os.Binder
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
@@ -59,6 +60,22 @@ class RecordingService : Service(), LifecycleOwner {
     // 供 Activity 获取 Preview Surface
     var previewSurfaceProvider: Preview.SurfaceProvider? = null
 
+    // Binder 供 Activity 获取 Service 实例
+    private val binder = LocalBinder()
+
+    inner class LocalBinder : Binder() {
+        fun getService(): RecordingService = this@RecordingService
+    }
+
+    /**
+     * Activity 通过 Binder 调用此方法传递 SurfaceProvider
+     * 如果相机已绑定，立即更新 Surface
+     */
+    fun updateSurfaceProvider(sp: Preview.SurfaceProvider?) {
+        previewSurfaceProvider = sp
+        previewUseCase?.setSurfaceProvider(sp)
+    }
+
     override fun onCreate() {
         super.onCreate()
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
@@ -99,7 +116,7 @@ class RecordingService : Service(), LifecycleOwner {
         super.onDestroy()
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder = binder
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

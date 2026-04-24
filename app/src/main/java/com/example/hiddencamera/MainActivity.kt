@@ -2,13 +2,16 @@ package com.example.hiddencamera
 
 import android.Manifest
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.IBinder
 import android.provider.Settings
 import android.view.View
 import android.widget.ImageButton
@@ -23,6 +26,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var btnRecord: MaterialButton
     private var isRecording = false
+    private var recordingService: RecordingService? = null
+    private var serviceBound = false
 
     private val recordingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -35,6 +40,20 @@ class MainActivity : AppCompatActivity() {
                     updateUI(false)
                 }
             }
+        }
+    }
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as RecordingService.LocalBinder
+            recordingService = binder.getService()
+            serviceBound = true
+            connectPreviewToService()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            recordingService = null
+            serviceBound = false
         }
     }
 
@@ -87,6 +106,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        // 绑定 Service 以获取实例（传递 SurfaceProvider）
+        bindService(
+            Intent(this, RecordingService::class.java),
+            serviceConnection,
+            Context.BIND_AUTO_CREATE
+        )
+
         val filter = IntentFilter().apply {
             addAction("com.example.hiddencamera.RECORDING_STARTED")
             addAction("com.example.hiddencamera.RECORDING_STOPPED")
@@ -102,13 +128,31 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         applyPreviewMode()
+        // 每次 Resume 重新连接 Surface（防止 Surface 重建后失效）
+        if (serviceBound) {
+            connectPreviewToService()
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        if (serviceBound) {
+            try { unbindService(serviceConnection) } catch (_: Exception) {}
+            serviceBound = false
+            recordingService = null
+        }
         try {
             unregisterReceiver(recordingReceiver)
         } catch (_: Exception) {}
+    }
+
+    /**
+     * 将 PreviewView 的 SurfaceProvider 传递给 Service
+     */
+    private fun connectPreviewToService() {
+        if (Prefs.getPreviewMode(this) != 0) return // 非预览模式不需要连接
+        val previewView = findViewById<androidx.camera.view.PreviewView>(R.id.previewView)
+        recordingService?.updateSurfaceProvider(previewView.surfaceProvider)
     }
 
     private fun applyPreviewMode() {
