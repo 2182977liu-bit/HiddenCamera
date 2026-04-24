@@ -6,7 +6,9 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -33,6 +35,7 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     private val lifecycleRegistry = LifecycleRegistry(this)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
@@ -54,7 +57,6 @@ class RecordingService : Service(), LifecycleOwner {
         try {
             when (intent?.action) {
                 ACTION_START -> {
-                    // startForeground 必须是第一个操作（Android 12+ 限制 5 秒内调用）
                     startForegroundNotification()
                     lifecycleRegistry.currentState = Lifecycle.State.RESUMED
                     val outputPath = intent.getStringExtra(EXTRA_OUTPUT_PATH)
@@ -122,7 +124,6 @@ class RecordingService : Service(), LifecycleOwner {
 
     private fun startRecording(outputPath: String?) {
         try {
-            // 使用 App 私有外部存储目录，不需要存储权限
             val storagePath = outputPath ?: getExternalFilesDir(null)?.absolutePath
                 ?: filesDir.absolutePath
             val outputDir = File(storagePath, "videos")
@@ -134,7 +135,6 @@ class RecordingService : Service(), LifecycleOwner {
                 }
             }
 
-            // 创建 .nomedia 文件，防止相册扫描
             try {
                 val nomediaFile = File(outputDir, ".nomedia")
                 if (!nomediaFile.exists()) {
@@ -149,16 +149,24 @@ class RecordingService : Service(), LifecycleOwner {
 
             Log.d(TAG, "准备录制: ${outputFile.absolutePath}")
 
-            val future = ProcessCameraProvider.getInstance(this)
-            future.addListener({
+            // ProcessCameraProvider.getInstance() 必须在主线程调用
+            mainHandler.post {
                 try {
-                    cameraProvider = future.get()
-                    bindCameraUseCases(outputFile)
+                    val future = ProcessCameraProvider.getInstance(this)
+                    future.addListener({
+                        try {
+                            cameraProvider = future.get()
+                            bindCameraUseCases(outputFile)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "获取 CameraProvider 失败", e)
+                            notifyError("相机初始化失败: ${e.message}")
+                        }
+                    }, mainHandler) // 回调也在主线程执行
                 } catch (e: Exception) {
-                    Log.e(TAG, "获取 CameraProvider 失败", e)
+                    Log.e(TAG, "ProcessCameraProvider.getInstance 失败", e)
                     notifyError("相机初始化失败: ${e.message}")
                 }
-            }, cameraExecutor)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "startRecording 异常", e)
             notifyError("启动录制失败: ${e.message}")
