@@ -11,6 +11,8 @@
     <string name="notification_channel_name">录制服务</string>
     <string name="notification_title">后台服务运行中</string>
     <string name="notification_text">视频录制服务正在运行</string>
+    <string name="notification_recording">正在录制中…</string>
+    <string name="notification_text_recording">点击通知栏按钮停止录制</string>
     <string name="permission_required">需要相机和录音权限</string>
     <string name="recording_started">录制已开始</string>
     <string name="recording_stopped">录制已停止</string>
@@ -28,4 +30,11 @@
     <string name="preview_mode_live">实时预览</string>
     <string name="preview_mode_status">录制状态</string>
     <string name="preview_mode_blank">空白</string>
+    <string name="notification_action_label">通知栏快捷按钮</string>
+    <string name="notification_action_desc">在通知栏显示停止录制按钮</string>
+    <string name="shortcut_enabled_label">桌面快捷方式</string>
+    <string name="shortcut_enabled_desc">在桌面创建快速录制快捷图标</string>
+    <string name="shortcut_created">快捷图标已创建，长按桌面空白处可找到</string>
+    <string name="quick_record_started">快速录制已开始</string>
+    <string name="quick_record_stopped">录制已停止</string>
 </resources>

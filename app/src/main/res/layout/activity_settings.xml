@@ -136,5 +136,64 @@
 
         </RadioGroup>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 通知栏快捷按钮 -->
+        <Switch
+            android:id="@+id/switchNotificationAction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notification_action_label"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notification_action_desc"
+            android:textSize="13sp"
+            android:textColor="#999999"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 桌面快捷方式 -->
+        <Switch
+            android:id="@+id/switchShortcut"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/shortcut_enabled_label"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/shortcut_enabled_desc"
+            android:textSize="13sp"
+            android:textColor="#999999"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateShortcut"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="创建桌面快捷图标"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp" />
+
     </LinearLayout>
 </ScrollView>

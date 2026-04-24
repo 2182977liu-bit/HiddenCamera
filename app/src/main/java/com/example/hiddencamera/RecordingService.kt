@@ -3,12 +3,13 @@ package com.example.hiddencamera
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Binder
 import android.os.Environment
 import android.os.Handler
-import android.os.Binder
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
@@ -16,8 +17,8 @@ import android.util.Range
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.*
 import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.video.*
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -37,6 +38,7 @@ class RecordingService : Service(), LifecycleOwner {
         private const val NOTIFICATION_ID = 1
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
+        const val ACTION_TOGGLE = "ACTION_TOGGLE"
 
         private fun getOutputDir(): File {
             return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "xcodx")
@@ -57,20 +59,14 @@ class RecordingService : Service(), LifecycleOwner {
     private var isStopping = false
     private lateinit var cameraExecutor: ExecutorService
 
-    // 供 Activity 获取 Preview Surface
     var previewSurfaceProvider: Preview.SurfaceProvider? = null
 
-    // Binder 供 Activity 获取 Service 实例
     private val binder = LocalBinder()
 
     inner class LocalBinder : Binder() {
         fun getService(): RecordingService = this@RecordingService
     }
 
-    /**
-     * Activity 通过 Binder 调用此方法传递 SurfaceProvider
-     * 如果相机已绑定，立即更新 Surface
-     */
     fun updateSurfaceProvider(sp: Preview.SurfaceProvider?) {
         previewSurfaceProvider = sp
         previewUseCase?.setSurfaceProvider(sp)
@@ -90,9 +86,22 @@ class RecordingService : Service(), LifecycleOwner {
                     startForegroundNotification()
                     lifecycleRegistry.currentState = Lifecycle.State.RESUMED
                     startRecording()
+                    updateNotification(true)
                 }
                 ACTION_STOP -> {
+                    updateNotification(false)
                     requestStopRecording()
+                }
+                ACTION_TOGGLE -> {
+                    if (isRecording) {
+                        updateNotification(false)
+                        requestStopRecording()
+                    } else {
+                        startForegroundNotification()
+                        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+                        startRecording()
+                        updateNotification(true)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -131,14 +140,7 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     private fun startForegroundNotification() {
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text))
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .build()
-
+        val notification = buildNotification(false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -151,6 +153,44 @@ class RecordingService : Service(), LifecycleOwner {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+    }
+
+    private fun updateNotification(recording: Boolean) {
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        manager.notify(NOTIFICATION_ID, buildNotification(recording))
+    }
+
+    private fun buildNotification(recording: Boolean): Notification {
+        val stopIntent = Intent(this, RecordingService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val stopPendingIntent = PendingIntent.getService(
+            this, 0, stopIntent,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+        )
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(
+                if (recording) getString(R.string.notification_recording)
+                else getString(R.string.notification_title)
+            )
+            .setContentText(
+                if (recording) getString(R.string.notification_text_recording)
+                else getString(R.string.notification_text)
+            )
+            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+
+        if (Prefs.isNotificationActionEnabled(this)) {
+            builder.addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                getString(R.string.stop_recording),
+                stopPendingIntent
+            )
+        }
+
+        return builder.build()
     }
 
     private fun startRecording() {
@@ -203,7 +243,6 @@ class RecordingService : Service(), LifecycleOwner {
 
     private fun bindCameraUseCases(outputFile: File) {
         val provider = cameraProvider ?: return
-
         provider.unbindAll()
 
         val lensFacing = if (Prefs.getCameraLens(this) == "front") {
@@ -221,7 +260,6 @@ class RecordingService : Service(), LifecycleOwner {
             else -> Quality.SD
         }
 
-        // 帧率设置
         val targetFps = Prefs.getFps(this)
 
         val recorder = Recorder.Builder()
@@ -234,7 +272,6 @@ class RecordingService : Service(), LifecycleOwner {
             )
             .build()
 
-        // 通过 Camera2Interop 设置帧率（必须在 Builder 阶段）
         val videoCaptureBuilder = VideoCapture.Builder(recorder)
         try {
             val fpsRange = Range(targetFps, targetFps)
@@ -250,7 +287,6 @@ class RecordingService : Service(), LifecycleOwner {
 
         videoCapture = videoCaptureBuilder.build()
 
-        // Preview 用于实时预览
         previewUseCase = Preview.Builder().build()
         previewSurfaceProvider?.let { sp ->
             previewUseCase?.setSurfaceProvider(sp)
@@ -331,7 +367,6 @@ class RecordingService : Service(), LifecycleOwner {
             return
         }
 
-        // 保底：3 秒后如果 Finalize 没触发，强制清理
         mainHandler.postDelayed({
             if (isStopping) {
                 Log.w(TAG, "Finalize 超时，强制清理")
