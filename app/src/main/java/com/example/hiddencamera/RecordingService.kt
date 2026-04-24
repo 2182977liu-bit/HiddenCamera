@@ -69,8 +69,10 @@ class RecordingService : Service(), LifecycleOwner {
 
     override fun onDestroy() {
         stopRecording()
-        cameraProvider?.shutdown?.let { shutdown ->
-            cameraExecutor.execute { shutdown() }
+        cameraProvider?.shutdown?.let { shutdownFuture ->
+            cameraExecutor.execute {
+                try { shutdownFuture.get() } catch (_: Exception) {}
+            }
         }
         cameraProvider = null
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
@@ -209,11 +211,11 @@ class RecordingService : Service(), LifecycleOwner {
                     is VideoRecordEvent.Finalize -> {
                         isRecording = false
                         if (event.hasError()) {
-                            val errorMsg = when {
-                                event.cause is VideoRecordException.FpsOutOfRange -> "帧率超出范围"
-                                event.cause is VideoRecordException.QualityUnavailable -> "请求的质量不可用"
-                                event.cause is VideoRecordException.EncoderError -> "编码器错误"
-                                else -> event.cause?.message ?: "未知错误"
+                            val errorMsg = when (val cause = event.cause) {
+                                is VideoRecordException.FpsOutOfRangeException -> "帧率超出范围"
+                                is VideoRecordException.QualityUnavailableException -> "请求的质量不可用"
+                                is VideoRecordException.EncoderException -> "编码器错误"
+                                else -> cause?.message ?: "未知错误"
                             }
                             Log.e(TAG, "录制错误: $errorMsg", event.cause)
                             notifyError("录制错误: $errorMsg")
