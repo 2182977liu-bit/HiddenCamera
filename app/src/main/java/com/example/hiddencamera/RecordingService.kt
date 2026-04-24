@@ -217,12 +217,11 @@ class RecordingService : Service(), LifecycleOwner {
             )
             .build()
 
-        videoCapture = VideoCapture.withOutput(recorder)
-
-        // 通过 Camera2Interop 设置帧率
+        // 通过 Camera2Interop 设置帧率（必须在 Builder 阶段）
+        val videoCaptureBuilder = VideoCapture.Builder(recorder)
         try {
             val fpsRange = Range(targetFps, targetFps)
-            Camera2Interop.Extender(videoCapture!!).apply {
+            Camera2Interop.Extender(videoCaptureBuilder).apply {
                 setVideoCaptureRequestOptions { builder ->
                     builder.set(android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fpsRange)
                 }
@@ -231,9 +230,13 @@ class RecordingService : Service(), LifecycleOwner {
             Log.w(TAG, "设置帧率 $targetFps 失败，使用默认帧率", e)
         }
 
+        videoCapture = videoCaptureBuilder.build()
+
         // Preview 用于实时预览
         previewUseCase = Preview.Builder().build()
-        previewSurfaceProvider?.let { previewUseCase?.surfaceProvider = it }
+        previewSurfaceProvider?.let { sp ->
+            previewUseCase?.setSurfaceProvider(sp)
+        }
 
         try {
             provider.bindToLifecycle(this, cameraSelector, previewUseCase, videoCapture)
