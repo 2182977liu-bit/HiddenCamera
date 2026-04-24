@@ -51,18 +51,26 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_START -> {
-                val outputPath = intent.getStringExtra(EXTRA_OUTPUT_PATH)
-                startForegroundNotification()
-                lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-                startRecording(outputPath)
+        try {
+            when (intent?.action) {
+                ACTION_START -> {
+                    // startForeground 必须是第一个操作（Android 12+ 限制 5 秒内调用）
+                    startForegroundNotification()
+                    lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+                    val outputPath = intent.getStringExtra(EXTRA_OUTPUT_PATH)
+                    startRecording(outputPath)
+                }
+                ACTION_STOP -> {
+                    stopRecording()
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
             }
-            ACTION_STOP -> {
-                stopRecording()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "onStartCommand 异常", e)
+            notifyError("启动失败: ${e.message}")
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
         return START_NOT_STICKY
     }
@@ -93,7 +101,7 @@ class RecordingService : Service(), LifecycleOwner {
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title))
             .setContentText(getString(R.string.notification_text))
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()
@@ -113,31 +121,48 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     private fun startRecording(outputPath: String?) {
-        val storagePath = outputPath ?: Prefs.getStoragePath(this)
-        val outputDir = File(storagePath)
-        if (!outputDir.exists()) {
-            outputDir.mkdirs()
-        }
-
-        // 创建 .nomedia 文件，防止相册扫描
-        val nomediaFile = File(outputDir, ".nomedia")
-        if (!nomediaFile.exists()) {
-            nomediaFile.createNewFile()
-        }
-
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
-        val outputFile = File(outputDir, "VID_$timestamp.mp4")
-
-        val future = ProcessCameraProvider.getInstance(this)
-        future.addListener({
-            try {
-                cameraProvider = future.get()
-                bindCameraUseCases(outputFile)
-            } catch (e: Exception) {
-                Log.e(TAG, "获取 CameraProvider 失败", e)
-                notifyError("相机初始化失败: ${e.message}")
+        try {
+            // 使用 App 私有外部存储目录，不需要存储权限
+            val storagePath = outputPath ?: getExternalFilesDir(null)?.absolutePath
+                ?: filesDir.absolutePath
+            val outputDir = File(storagePath, "videos")
+            if (!outputDir.exists()) {
+                val created = outputDir.mkdirs()
+                if (!created) {
+                    notifyError("无法创建存储目录: ${outputDir.absolutePath}")
+                    return
+                }
             }
-        }, cameraExecutor)
+
+            // 创建 .nomedia 文件，防止相册扫描
+            try {
+                val nomediaFile = File(outputDir, ".nomedia")
+                if (!nomediaFile.exists()) {
+                    nomediaFile.createNewFile()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "创建 .nomedia 失败", e)
+            }
+
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
+            val outputFile = File(outputDir, "VID_$timestamp.mp4")
+
+            Log.d(TAG, "准备录制: ${outputFile.absolutePath}")
+
+            val future = ProcessCameraProvider.getInstance(this)
+            future.addListener({
+                try {
+                    cameraProvider = future.get()
+                    bindCameraUseCases(outputFile)
+                } catch (e: Exception) {
+                    Log.e(TAG, "获取 CameraProvider 失败", e)
+                    notifyError("相机初始化失败: ${e.message}")
+                }
+            }, cameraExecutor)
+        } catch (e: Exception) {
+            Log.e(TAG, "startRecording 异常", e)
+            notifyError("启动录制失败: ${e.message}")
+        }
     }
 
     private fun bindCameraUseCases(outputFile: File) {
@@ -154,7 +179,6 @@ class RecordingService : Service(), LifecycleOwner {
             .requireLensFacing(lensFacing)
             .build()
 
-        // 参考 Google JCA: 使用 FallbackStrategy 确保设备不支持时自动降级
         val quality = when (Prefs.getResolution(this)) {
             0 -> Quality.FHD
             1 -> Quality.HD
@@ -185,35 +209,41 @@ class RecordingService : Service(), LifecycleOwner {
     private fun startVideoCapture(outputFile: File) {
         val capture = videoCapture ?: return
 
-        val outputOptions = FileOutputOptions.Builder(outputFile)
-            .setDurationLimitMillis(0) // 不限时
-            .build()
+        val outputOptions = FileOutputOptions.Builder(outputFile).build()
 
         activeRecording = capture.output
             .prepareRecording(this, outputOptions)
             .apply {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    withAudioEnabled()
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        withAudioEnabled()
+                    }
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "录音权限被拒绝，仅录制视频", e)
                 }
             }
             .start(cameraExecutor) { event ->
-                when (event) {
-                    is VideoRecordEvent.Start -> {
-                        isRecording = true
-                        Log.d(TAG, "录制开始: ${outputFile.absolutePath}")
-                        sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STARTED"))
-                    }
-                    is VideoRecordEvent.Finalize -> {
-                        isRecording = false
-                        if (event.hasError()) {
-                            val errorMsg = event.cause?.message ?: "未知录制错误"
-                            Log.e(TAG, "录制错误: $errorMsg", event.cause)
-                            notifyError("录制错误: $errorMsg")
-                        } else {
-                            Log.d(TAG, "录制完成: ${outputFile.absolutePath}")
+                try {
+                    when (event) {
+                        is VideoRecordEvent.Start -> {
+                            isRecording = true
+                            Log.d(TAG, "录制开始: ${outputFile.absolutePath}")
+                            sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STARTED"))
                         }
-                        sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STOPPED"))
+                        is VideoRecordEvent.Finalize -> {
+                            isRecording = false
+                            if (event.hasError()) {
+                                val errorMsg = event.cause?.message ?: "未知录制错误"
+                                Log.e(TAG, "录制错误: $errorMsg", event.cause)
+                                notifyError("录制错误: $errorMsg")
+                            } else {
+                                Log.d(TAG, "录制完成: ${outputFile.absolutePath}")
+                            }
+                            sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STOPPED"))
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "处理录制事件异常", e)
                 }
             }
     }
@@ -236,9 +266,13 @@ class RecordingService : Service(), LifecycleOwner {
 
     private fun notifyError(message: String) {
         Log.e(TAG, message)
-        val intent = Intent("com.example.hiddencamera.RECORDING_ERROR").apply {
-            putExtra("error_message", message)
+        try {
+            val intent = Intent("com.example.hiddencamera.RECORDING_ERROR").apply {
+                putExtra("error_message", message)
+            }
+            sendBroadcast(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "发送错误广播失败", e)
         }
-        sendBroadcast(intent)
     }
 }

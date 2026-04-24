@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
@@ -64,7 +63,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        // 注册广播接收器
         val filter = IntentFilter().apply {
             addAction("com.example.hiddencamera.RECORDING_STARTED")
             addAction("com.example.hiddencamera.RECORDING_STOPPED")
@@ -94,10 +92,6 @@ class MainActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        }
-
         val needed = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
@@ -110,19 +104,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
-        val storagePath = Prefs.getStoragePath(this)
-        val serviceIntent = Intent(this, RecordingService::class.java).apply {
-            action = RecordingService.ACTION_START
-            putExtra(RecordingService.EXTRA_OUTPUT_PATH, storagePath)
-        }
+        try {
+            val serviceIntent = Intent(this, RecordingService::class.java).apply {
+                action = RecordingService.ACTION_START
+            }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
 
-        Toast.makeText(this, R.string.recording_started, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.recording_started, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun stopRecording() {
