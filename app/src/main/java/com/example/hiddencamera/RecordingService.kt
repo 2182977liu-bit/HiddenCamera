@@ -14,6 +14,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -161,7 +162,7 @@ class RecordingService : Service(), LifecycleOwner {
                             Log.e(TAG, "获取 CameraProvider 失败", e)
                             notifyError("相机初始化失败: ${e.message}")
                         }
-                    }, mainHandler) // 回调也在主线程执行
+                    }, ContextCompat.getMainExecutor(this)) // 使用主线程 Executor
                 } catch (e: Exception) {
                     Log.e(TAG, "ProcessCameraProvider.getInstance 失败", e)
                     notifyError("相机初始化失败: ${e.message}")
