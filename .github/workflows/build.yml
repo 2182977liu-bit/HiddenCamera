@@ -12,15 +12,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Verify source code
-      run: |
-        echo "=== RecordingService.kt line 72 ==="
-        sed -n '72p' app/src/main/java/com/example/hiddencamera/RecordingService.kt
-        echo "=== RecordingService.kt line 215 ==="
-        sed -n '215p' app/src/main/java/com/example/hiddencamera/RecordingService.kt
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -36,7 +27,10 @@ jobs:
         gradle wrapper --gradle-version 8.2
 
     - name: Build Debug APK
-      run: ./gradlew clean assembleDebug --no-build-cache --no-daemon 2>&1 | tee build.log
+      run: |
+        rm -rf ~/.gradle/caches/transforms-*
+        rm -rf ~/.gradle/caches/modules-*
+        ./gradlew clean assembleDebug --no-build-cache --no-daemon 2>&1 | tee build.log
 
     - name: Upload APK
       if: success()
