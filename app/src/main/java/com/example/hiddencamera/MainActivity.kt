@@ -106,19 +106,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        // 处理桌面快捷方式的切换录制 Intent
-        if (intent?.action == "com.example.hiddencamera.ACTION_TOGGLE_RECORDING") {
-            // 延迟执行，等待 Service 绑定完成
-            window.decorView.postDelayed({
-                if (isRecording) {
-                    stopRecording()
-                } else {
-                    checkPermissionsAndStart()
-                }
-                finish() // 快捷方式不需要保留 Activity
-            }, 500)
-        }
-
         // 绑定 Service 以获取实例（传递 SurfaceProvider）
         bindService(
             Intent(this, RecordingService::class.java),

@@ -106,7 +106,7 @@ class SettingsActivity : AppCompatActivity() {
             if (shortcutManager.isRequestPinShortcutSupported) {
                 // Pinned Shortcut 的 setIntent 需要 Intent（不是 PendingIntent）
                 // 使用一个隐式 Intent，通过 MainActivity 来中转处理
-                val shortcutIntent = Intent(this, MainActivity::class.java).apply {
+                val shortcutIntent = Intent(this, ToggleRecordingActivity::class.java).apply {
                     action = "com.example.hiddencamera.ACTION_TOGGLE_RECORDING"
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
