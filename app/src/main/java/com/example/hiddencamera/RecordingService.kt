@@ -178,14 +178,14 @@ class RecordingService : Service(), LifecycleOwner {
                 if (recording) getString(R.string.notification_text_recording)
                 else getString(R.string.notification_text)
             )
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setSmallIcon(android.R.drawable.ic_menu_manage)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
 
         if (Prefs.isNotificationActionEnabled(this)) {
             builder.addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                getString(R.string.stop_recording),
+                "停止服务",
                 stopPendingIntent
             )
         }

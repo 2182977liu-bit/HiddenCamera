@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -90,6 +91,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // 伪装最近任务：显示为"系统服务" + 灰色图标
+        setTaskDescription(
+            ActivityManager.TaskDescription(
+                "系统服务",
+                R.mipmap.ic_launcher,
+                getColor(R.color.primary)
+            )
+        )
 
         btnRecord = findViewById(R.id.btnRecord)
         val btnSettings = findViewById<ImageButton>(R.id.btnSettings)
