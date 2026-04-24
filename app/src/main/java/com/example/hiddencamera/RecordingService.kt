@@ -8,13 +8,13 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import androidx.camera.core.*
+import androidx.camera.core.CameraSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.Lifecycle
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -55,7 +55,6 @@ class RecordingService : Service(), LifecycleOwner {
             ACTION_START -> {
                 val outputPath = intent.getStringExtra(EXTRA_OUTPUT_PATH)
                 startForegroundNotification()
-                lifecycleRegistry.currentState = Lifecycle.State.STARTED
                 lifecycleRegistry.currentState = Lifecycle.State.RESUMED
                 startRecording(outputPath)
             }
@@ -69,10 +68,14 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     override fun onDestroy() {
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        super.onDestroy()
         stopRecording()
+        cameraProvider?.shutdown?.let { shutdown ->
+            cameraExecutor.execute { shutdown() }
+        }
+        cameraProvider = null
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         cameraExecutor.shutdown()
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -125,13 +128,18 @@ class RecordingService : Service(), LifecycleOwner {
             nomediaFile.createNewFile()
         }
 
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
         val outputFile = File(outputDir, "VID_$timestamp.mp4")
 
         val future = ProcessCameraProvider.getInstance(this)
         future.addListener({
-            cameraProvider = future.get()
-            bindCameraUseCases(outputFile)
+            try {
+                cameraProvider = future.get()
+                bindCameraUseCases(outputFile)
+            } catch (e: Exception) {
+                Log.e(TAG, "获取 CameraProvider 失败", e)
+                notifyError("相机初始化失败: ${e.message}")
+            }
         }, cameraExecutor)
     }
 
@@ -149,6 +157,7 @@ class RecordingService : Service(), LifecycleOwner {
             .requireLensFacing(lensFacing)
             .build()
 
+        // 参考 Google JCA: 使用 FallbackStrategy 确保设备不支持时自动降级
         val quality = when (Prefs.getResolution(this)) {
             0 -> Quality.FHD
             1 -> Quality.HD
@@ -156,7 +165,13 @@ class RecordingService : Service(), LifecycleOwner {
         }
 
         val recorder = Recorder.Builder()
-            .setQualitySelector(QualitySelector.from(quality))
+            .setExecutor(cameraExecutor)
+            .setQualitySelector(
+                QualitySelector.from(
+                    quality,
+                    FallbackStrategy.lowerQualityOrHigherThan(quality)
+                )
+            )
             .build()
 
         videoCapture = VideoCapture.withOutput(recorder)
@@ -166,13 +181,16 @@ class RecordingService : Service(), LifecycleOwner {
             startVideoCapture(outputFile)
         } catch (e: Exception) {
             Log.e(TAG, "绑定相机失败", e)
+            notifyError("绑定相机失败: ${e.message}")
         }
     }
 
     private fun startVideoCapture(outputFile: File) {
         val capture = videoCapture ?: return
 
-        val outputOptions = FileOutputOptions.Builder(outputFile).build()
+        val outputOptions = FileOutputOptions.Builder(outputFile)
+            .setDurationLimitMillis(0) // 不限时
+            .build()
 
         activeRecording = capture.output
             .prepareRecording(this, outputOptions)
@@ -191,7 +209,14 @@ class RecordingService : Service(), LifecycleOwner {
                     is VideoRecordEvent.Finalize -> {
                         isRecording = false
                         if (event.hasError()) {
-                            Log.e(TAG, "录制错误: ${event.cause}")
+                            val errorMsg = when {
+                                event.cause is VideoRecordException.FpsOutOfRange -> "帧率超出范围"
+                                event.cause is VideoRecordException.QualityUnavailable -> "请求的质量不可用"
+                                event.cause is VideoRecordException.EncoderError -> "编码器错误"
+                                else -> event.cause?.message ?: "未知错误"
+                            }
+                            Log.e(TAG, "录制错误: $errorMsg", event.cause)
+                            notifyError("录制错误: $errorMsg")
                         } else {
                             Log.d(TAG, "录制完成: ${outputFile.absolutePath}")
                         }
@@ -202,11 +227,26 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     private fun stopRecording() {
-        activeRecording?.stop()
+        try {
+            activeRecording?.stop()
+        } catch (e: Exception) {
+            Log.w(TAG, "停止录制时异常", e)
+        }
         activeRecording = null
         videoCapture = null
-        cameraProvider?.unbindAll()
-        cameraProvider = null
+        try {
+            cameraProvider?.unbindAll()
+        } catch (e: Exception) {
+            Log.w(TAG, "解绑相机时异常", e)
+        }
         isRecording = false
+    }
+
+    private fun notifyError(message: String) {
+        Log.e(TAG, message)
+        val intent = Intent("com.example.hiddencamera.RECORDING_ERROR").apply {
+            putExtra("error_message", message)
+        }
+        sendBroadcast(intent)
     }
 }

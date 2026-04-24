@@ -25,6 +25,11 @@ class MainActivity : AppCompatActivity() {
             when (intent?.action) {
                 "com.example.hiddencamera.RECORDING_STARTED" -> updateUI(true)
                 "com.example.hiddencamera.RECORDING_STOPPED" -> updateUI(false)
+                "com.example.hiddencamera.RECORDING_ERROR" -> {
+                    val errorMsg = intent.getStringExtra("error_message") ?: "未知错误"
+                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                    updateUI(false)
+                }
             }
         }
     }
@@ -63,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         val filter = IntentFilter().apply {
             addAction("com.example.hiddencamera.RECORDING_STARTED")
             addAction("com.example.hiddencamera.RECORDING_STOPPED")
+            addAction("com.example.hiddencamera.RECORDING_ERROR")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(recordingReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
