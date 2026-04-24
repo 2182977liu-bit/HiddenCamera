@@ -3,22 +3,25 @@ package com.example.hiddencamera
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
+import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.IBinder
 import android.util.Log
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.Lifecycle
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class RecordingService : LifecycleService() {
+class RecordingService : Service(), LifecycleOwner {
 
     companion object {
         private const val TAG = "RecordingService"
@@ -29,6 +32,11 @@ class RecordingService : LifecycleService() {
         const val EXTRA_OUTPUT_PATH = "output_path"
     }
 
+    private val lifecycleRegistry = LifecycleRegistry(this)
+
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
     private var cameraProvider: ProcessCameraProvider? = null
     private var videoCapture: VideoCapture<Recorder>? = null
     private var activeRecording: Recording? = null
@@ -37,6 +45,7 @@ class RecordingService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        lifecycleRegistry.currentState = Lifecycle.State.CREATED
         cameraExecutor = Executors.newSingleThreadExecutor()
         createNotificationChannel()
     }
@@ -45,7 +54,9 @@ class RecordingService : LifecycleService() {
         when (intent?.action) {
             ACTION_START -> {
                 val outputPath = intent.getStringExtra(EXTRA_OUTPUT_PATH)
-                startForegroundService()
+                startForegroundNotification()
+                lifecycleRegistry.currentState = Lifecycle.State.STARTED
+                lifecycleRegistry.currentState = Lifecycle.State.RESUMED
                 startRecording(outputPath)
             }
             ACTION_STOP -> {
@@ -58,10 +69,13 @@ class RecordingService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         super.onDestroy()
         stopRecording()
         cameraExecutor.shutdown()
     }
+
+    override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -75,7 +89,7 @@ class RecordingService : LifecycleService() {
         }
     }
 
-    private fun startForegroundService() {
+    private fun startForegroundNotification() {
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title))
             .setContentText(getString(R.string.notification_text))
@@ -83,7 +97,19 @@ class RecordingService : LifecycleService() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()
-        startForeground(NOTIFICATION_ID, notification)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA or
+                            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                } else {
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                }
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     private fun startRecording(outputPath: String?) {
@@ -112,10 +138,8 @@ class RecordingService : LifecycleService() {
     private fun bindCameraUseCases(outputFile: File) {
         val provider = cameraProvider ?: return
 
-        // 解绑所有用例
         provider.unbindAll()
 
-        // 选择摄像头
         val lensFacing = if (Prefs.getCameraLens(this) == "front") {
             CameraSelector.LENS_FACING_FRONT
         } else {
@@ -125,7 +149,6 @@ class RecordingService : LifecycleService() {
             .requireLensFacing(lensFacing)
             .build()
 
-        // 设置分辨率
         val quality = when (Prefs.getResolution(this)) {
             0 -> Quality.FHD
             1 -> Quality.HD
