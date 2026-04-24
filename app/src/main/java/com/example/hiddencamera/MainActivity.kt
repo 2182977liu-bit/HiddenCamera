@@ -6,26 +6,23 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.view.View
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var btnRecord: MaterialButton
-    private lateinit var btnSettings: MaterialButton
-    private lateinit var tvStoragePath: TextView
     private var isRecording = false
-    private var storagePermissionGranted = false
 
     private val recordingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -61,17 +58,13 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            storagePermissionGranted = Environment.isExternalStorageManager()
+            if (Environment.isExternalStorageManager()) {
+                doStartRecording()
+            } else {
+                Toast.makeText(this, "需要存储权限才能保存视频", Toast.LENGTH_LONG).show()
+            }
         } else {
-            storagePermissionGranted = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-
-        if (storagePermissionGranted) {
             doStartRecording()
-        } else {
-            Toast.makeText(this, "需要存储权限才能保存视频到 Download/xcodx/", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -80,18 +73,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         btnRecord = findViewById(R.id.btnRecord)
-        btnSettings = findViewById(R.id.btnSettings)
-        tvStoragePath = findViewById(R.id.tvStoragePath)
-        val btnOpenFolder = findViewById<MaterialButton>(R.id.btnOpenFolder)
-
-        // 显示存储路径
-        val videoDir = getVideoDir()
-        tvStoragePath.text = videoDir.absolutePath
-
-        // 打开文件夹
-        btnOpenFolder.setOnClickListener {
-            openFolder(videoDir)
-        }
+        val btnSettings = findViewById<ImageButton>(R.id.btnSettings)
 
         btnRecord.setOnClickListener {
             if (isRecording) {
@@ -119,14 +101,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 从设置页返回后刷新权限状态
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            storagePermissionGranted = Environment.isExternalStorageManager()
-        } else {
-            storagePermissionGranted = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
+        applyPreviewMode()
     }
 
     override fun onDestroy() {
@@ -136,29 +111,26 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    private fun getVideoDir(): File {
-        return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "xcodx")
-    }
+    private fun applyPreviewMode() {
+        val previewView = findViewById<androidx.camera.view.PreviewView>(R.id.previewView)
+        val statusOverlay = findViewById<View>(R.id.statusOverlay)
+        val blankOverlay = findViewById<View>(R.id.blankOverlay)
 
-    private fun openFolder(dir: File) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.parse(dir.absolutePath), "resource/folder")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        when (Prefs.getPreviewMode(this)) {
+            0 -> { // 实时预览
+                previewView.visibility = View.VISIBLE
+                statusOverlay.visibility = View.GONE
+                blankOverlay.visibility = View.GONE
             }
-            startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    setDataAndType(Uri.parse(dir.absolutePath), "resource/folder")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(intent)
-            } catch (e2: Exception) {
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("path", dir.absolutePath))
-                Toast.makeText(this, "已复制路径到剪贴板:\n${dir.absolutePath}", Toast.LENGTH_LONG).show()
+            1 -> { // 录制状态
+                previewView.visibility = View.GONE
+                statusOverlay.visibility = View.VISIBLE
+                blankOverlay.visibility = View.GONE
+            }
+            2 -> { // 空白
+                previewView.visibility = View.GONE
+                statusOverlay.visibility = View.GONE
+                blankOverlay.visibility = View.VISIBLE
             }
         }
     }
@@ -173,7 +145,6 @@ class MainActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        // Android 8-9 需要存储权限
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
@@ -191,27 +162,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkStoragePermissionAndStart() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ 需要 MANAGE_EXTERNAL_STORAGE
             if (Environment.isExternalStorageManager()) {
                 doStartRecording()
             } else {
                 Toast.makeText(this, "请授予文件管理权限", Toast.LENGTH_SHORT).show()
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                    data = Uri.parse("package:$packageName")
+                    data = android.net.Uri.parse("package:$packageName")
                 }
                 manageStorageLauncher.launch(intent)
             }
-        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            // Android 8-9 需要 WRITE_EXTERNAL_STORAGE
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                == PackageManager.PERMISSION_GRANTED) {
-                doStartRecording()
-            } else {
-                // 已在 permissionLauncher 中处理
-                doStartRecording()
-            }
         } else {
-            // Android 10 可以直接访问公共 Download 目录
             doStartRecording()
         }
     }
@@ -247,13 +207,13 @@ class MainActivity : AppCompatActivity() {
         if (recording) {
             btnRecord.text = getString(R.string.stop_recording)
             btnRecord.setBackgroundColor(getColor(R.color.recording_red))
-            findViewById<android.view.View>(R.id.indicator)
+            findViewById<View>(R.id.indicator)
                 .setBackgroundResource(R.drawable.indicator_recording)
             findViewById<TextView>(R.id.tvStatus).text = "录制状态：录制中..."
         } else {
             btnRecord.text = getString(R.string.start_recording)
             btnRecord.setBackgroundColor(getColor(R.color.primary))
-            findViewById<android.view.View>(R.id.indicator)
+            findViewById<View>(R.id.indicator)
                 .setBackgroundResource(R.drawable.indicator_idle)
             findViewById<TextView>(R.id.tvStatus).text = getString(R.string.recording_status)
         }

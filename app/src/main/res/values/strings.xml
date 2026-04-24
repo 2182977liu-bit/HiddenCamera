@@ -5,8 +5,6 @@
     <string name="start_recording">开始录制</string>
     <string name="stop_recording">停止录制</string>
     <string name="recording_status">录制状态：未录制</string>
-    <string name="storage_path_label">存储路径</string>
-    <string name="storage_path_default">/sdcard/HiddenCamera</string>
     <string name="camera_lens_label">摄像头选择</string>
     <string name="camera_front">前置摄像头</string>
     <string name="camera_back">后置摄像头</string>
@@ -14,18 +12,20 @@
     <string name="notification_title">后台服务运行中</string>
     <string name="notification_text">视频录制服务正在运行</string>
     <string name="permission_required">需要相机和录音权限</string>
-    <string name="storage_permission_required">需要存储权限来保存视频</string>
-    <string name="path_not_set">请先在设置中配置存储路径</string>
     <string name="recording_started">录制已开始</string>
     <string name="recording_stopped">录制已停止</string>
     <string name="select_camera">选择摄像头</string>
-    <string name="change_storage_path">更改存储路径</string>
-    <string name="current_path">当前路径</string>
-    <string name="set_path">设置路径</string>
-    <string name="invalid_path">路径无效</string>
-    <string name="path_set_success">存储路径已更新</string>
     <string name="video_resolution_label">视频分辨率</string>
-    <string name="resolution_720p">720p (1280x720)</string>
     <string name="resolution_1080p">1080p (1920x1080)</string>
+    <string name="resolution_720p">720p (1280x720)</string>
     <string name="resolution_480p">480p (720x480)</string>
+    <string name="fps_label">录制帧率</string>
+    <string name="fps_auto">自动</string>
+    <string name="fps_30">30 FPS</string>
+    <string name="fps_60">60 FPS</string>
+    <string name="fps_120">120 FPS</string>
+    <string name="preview_mode_label">主界面显示模式</string>
+    <string name="preview_mode_live">实时预览</string>
+    <string name="preview_mode_status">录制状态</string>
+    <string name="preview_mode_blank">空白</string>
 </resources>

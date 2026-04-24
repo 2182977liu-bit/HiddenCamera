@@ -19,55 +19,6 @@
             android:textColor="@color/black"
             android:layout_marginBottom="24dp" />
 
-        <!-- 存储路径 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/storage_path_label"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#333333" />
-
-        <TextView
-            android:id="@+id/tvCurrentPath"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/storage_path_default"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:padding="12dp"
-            android:background="#EEEEEE"
-            android:layout_marginTop="8dp" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilPath"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="@string/change_storage_path">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPath"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textUri" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSetPath"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="@string/set_path"
-            android:layout_marginTop="8dp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="24dp" />
-
         <!-- 摄像头选择 -->
         <TextView
             android:layout_width="wrap_content"
@@ -119,6 +70,71 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginTop="8dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 帧率选择 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fps_label"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <Spinner
+            android:id="@+id/spinnerFps"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 预览模式 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/preview_mode_label"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <RadioGroup
+            android:id="@+id/rgPreviewMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <RadioButton
+                android:id="@+id/rbPreviewLive"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/preview_mode_live"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/rbPreviewStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/preview_mode_status" />
+
+            <RadioButton
+                android:id="@+id/rbPreviewBlank"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/preview_mode_blank" />
+
+        </RadioGroup>
 
     </LinearLayout>
 </ScrollView>

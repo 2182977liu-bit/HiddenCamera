@@ -11,9 +11,12 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.util.Range
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
+import androidx.camera.camera2.interop.Camera2Interop
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -34,7 +37,6 @@ class RecordingService : Service(), LifecycleOwner {
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
 
-        // 公共 Download/xcodx/ 目录
         private fun getOutputDir(): File {
             return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "xcodx")
         }
@@ -48,10 +50,14 @@ class RecordingService : Service(), LifecycleOwner {
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var videoCapture: VideoCapture<Recorder>? = null
+    private var previewUseCase: Preview? = null
     private var activeRecording: Recording? = null
     private var isRecording = false
     private var isStopping = false
     private lateinit var cameraExecutor: ExecutorService
+
+    // 供 Activity 获取 Preview Surface
+    var previewSurfaceProvider: Preview.SurfaceProvider? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -81,10 +87,9 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     override fun onDestroy() {
-        // onDestroy 中只做最安全的清理，不调用 activeRecording.stop()
-        // 因为 stop() 会触发 Finalize 回调，在销毁过程中可能崩溃
         activeRecording = null
         videoCapture = null
+        previewUseCase = null
         try {
             cameraProvider?.unbindAll()
         } catch (_: Exception) {}
@@ -142,7 +147,6 @@ class RecordingService : Service(), LifecycleOwner {
                 }
             }
 
-            // 创建 .nomedia 文件，防止相册扫描
             try {
                 val nomediaFile = File(outputDir, ".nomedia")
                 if (!nomediaFile.exists()) {
@@ -157,7 +161,6 @@ class RecordingService : Service(), LifecycleOwner {
 
             Log.d(TAG, "准备录制: ${outputFile.absolutePath}")
 
-            // ProcessCameraProvider.getInstance() 必须在主线程调用
             mainHandler.post {
                 try {
                     val future = ProcessCameraProvider.getInstance(this)
@@ -201,6 +204,9 @@ class RecordingService : Service(), LifecycleOwner {
             else -> Quality.SD
         }
 
+        // 帧率设置
+        val targetFps = Prefs.getFps(this)
+
         val recorder = Recorder.Builder()
             .setExecutor(cameraExecutor)
             .setQualitySelector(
@@ -213,8 +219,24 @@ class RecordingService : Service(), LifecycleOwner {
 
         videoCapture = VideoCapture.withOutput(recorder)
 
+        // 通过 Camera2Interop 设置帧率
         try {
-            provider.bindToLifecycle(this, cameraSelector, videoCapture)
+            val fpsRange = Range(targetFps, targetFps)
+            Camera2Interop.Extender(videoCapture!!).apply {
+                setVideoCaptureRequestOptions { builder ->
+                    builder.set(android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fpsRange)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "设置帧率 $targetFps 失败，使用默认帧率", e)
+        }
+
+        // Preview 用于实时预览
+        previewUseCase = Preview.Builder().build()
+        previewSurfaceProvider?.let { previewUseCase?.surfaceProvider = it }
+
+        try {
+            provider.bindToLifecycle(this, cameraSelector, previewUseCase, videoCapture)
             startVideoCapture(outputFile)
         } catch (e: Exception) {
             Log.e(TAG, "绑定相机失败", e)
@@ -259,7 +281,6 @@ class RecordingService : Service(), LifecycleOwner {
                             activeRecording = null
                             sendBroadcast(Intent("com.example.hiddencamera.RECORDING_STOPPED"))
 
-                            // 录制完全结束后再清理相机资源并停止服务
                             if (isStopping) {
                                 mainHandler.post {
                                     cleanupAndStop()
@@ -273,12 +294,8 @@ class RecordingService : Service(), LifecycleOwner {
             }
     }
 
-    /**
-     * 请求停止录制 — 只调用 stop()，等待 Finalize 回调后再清理
-     */
     private fun requestStopRecording() {
         if (!isRecording && activeRecording == null) {
-            // 没有在录制，直接停止服务
             safeStopSelf()
             return
         }
@@ -288,17 +305,24 @@ class RecordingService : Service(), LifecycleOwner {
             activeRecording?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "停止录制时异常", e)
-            // stop 失败时直接清理
             activeRecording = null
             cleanupAndStop()
+            return
         }
+
+        // 保底：3 秒后如果 Finalize 没触发，强制清理
+        mainHandler.postDelayed({
+            if (isStopping) {
+                Log.w(TAG, "Finalize 超时，强制清理")
+                activeRecording = null
+                cleanupAndStop()
+            }
+        }, 3000)
     }
 
-    /**
-     * 安全清理并停止服务 — 在 Finalize 回调后调用
-     */
     private fun cleanupAndStop() {
         videoCapture = null
+        previewUseCase = null
         try {
             cameraProvider?.unbindAll()
         } catch (e: Exception) {
@@ -314,7 +338,9 @@ class RecordingService : Service(), LifecycleOwner {
         try {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } catch (_: Exception) {}
-        stopSelf()
+        try {
+            stopSelf()
+        } catch (_: Exception) {}
     }
 
     private fun notifyError(message: String) {
