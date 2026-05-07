@@ -116,7 +116,7 @@ class SettingsActivity : AppCompatActivity() {
                     .setLongLabel("点击开始/停止录制")
                     .setIcon(
                         android.graphics.drawable.Icon.createWithResource(
-                            this, android.R.drawable.ic_menu_camera
+                            this, android.R.drawable.ic_menu_preferences
                         )
                     )
                     .setIntent(shortcutIntent)

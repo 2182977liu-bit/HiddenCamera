@@ -273,16 +273,19 @@ class RecordingService : Service(), LifecycleOwner {
             .build()
 
         val videoCaptureBuilder = VideoCapture.Builder(recorder)
-        try {
-            val fpsRange = Range(targetFps, targetFps)
-            Camera2Interop.Extender(videoCaptureBuilder).apply {
-                setCaptureRequestOption(
-                    android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
-                    fpsRange
-                )
+        // 帧率 0 表示自动，跳过设置
+        if (targetFps > 0) {
+            try {
+                val fpsRange = Range(targetFps, targetFps)
+                Camera2Interop.Extender(videoCaptureBuilder).apply {
+                    setCaptureRequestOption(
+                        android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
+                        fpsRange
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "设置帧率 $targetFps 失败，使用默认帧率", e)
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "设置帧率 $targetFps 失败，使用默认帧率", e)
         }
 
         videoCapture = videoCaptureBuilder.build()
