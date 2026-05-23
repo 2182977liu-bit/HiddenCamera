@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -19,7 +20,6 @@
             android:textColor="@color/black"
             android:layout_marginBottom="24dp" />
 
-        <!-- 摄像头选择 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -46,7 +46,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/camera_front" />
-
         </RadioGroup>
 
         <View
@@ -56,7 +55,6 @@
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- 视频分辨率 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -78,7 +76,6 @@
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- 帧率选择 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -100,7 +97,6 @@
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- 预览模式 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -133,7 +129,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/preview_mode_blank" />
-
         </RadioGroup>
 
         <View
@@ -143,7 +138,312 @@
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- 通知栏快捷按钮 -->
+        <!-- 美颜设置区域 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/beauty_title"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#FF6B9C" />
+
+        <Switch
+            android:id="@+id/switchBeauty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/beauty_enable"
+            android:textSize="16sp"
+            android:textColor="#333333"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/beauty_enable_desc"
+            android:textSize="13sp"
+            android:textColor="#999999"
+            android:layout_marginTop="2dp" />
+
+        <!-- 人脸美颜 SeekBars -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/skin_smooth"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekSkinSmooth"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvSkinSmooth"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="50"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/skin_whiten"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekSkinWhiten"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvSkinWhiten"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="50"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/skin_rosy"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekSkinRosy"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvSkinRosy"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/face_slim"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekFaceSlim"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvFaceSlim"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eye_enlarge"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekEyeEnlarge"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvEyeEnlarge"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 身材美体设置 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/body_title"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FF6B9C" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚠ 身材美体需要集成第三方美颜SDK（如字节跳动EffectSDK）才能发挥完整效果"
+            android:textSize="12sp"
+            android:textColor="#FF9800"
+            android:layout_marginTop="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/body_slim"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekBodySlim"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvBodySlim"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/leg_length"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekLegLength"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvLegLength"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/waist_slim"
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginTop="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <SeekBar
+                android:id="@+id/seekWaistSlim"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100" />
+
+            <TextView
+                android:id="@+id/tvWaistSlim"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp"
+                android:textColor="#FF6B9C"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp" />
+
         <Switch
             android:id="@+id/switchNotificationAction"
             android:layout_width="match_parent"
@@ -168,7 +468,6 @@
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- 桌面快捷方式 -->
         <Switch
             android:id="@+id/switchShortcut"
             android:layout_width="match_parent"

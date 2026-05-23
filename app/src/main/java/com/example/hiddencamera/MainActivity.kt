@@ -1,13 +1,13 @@
 package com.example.hiddencamera
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
-import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -33,12 +33,16 @@ class MainActivity : AppCompatActivity() {
     private val recordingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                "com.example.hiddencamera.RECORDING_STARTED" -> updateUI(true)
-                "com.example.hiddencamera.RECORDING_STOPPED" -> updateUI(false)
+                "com.example.hiddencamera.RECORDING_STARTED" -> {
+                    if (!isRecording) updateUI(true)
+                }
+                "com.example.hiddencamera.RECORDING_STOPPED" -> {
+                    if (isRecording) updateUI(false)
+                }
                 "com.example.hiddencamera.RECORDING_ERROR" -> {
                     val errorMsg = intent.getStringExtra("error_message") ?: "未知错误"
                     Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
-                    updateUI(false)
+                    if (isRecording) updateUI(false)
                 }
             }
         }
@@ -50,6 +54,7 @@ class MainActivity : AppCompatActivity() {
             recordingService = binder.getService()
             serviceBound = true
             connectPreviewToService()
+            syncRecordingState()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -92,7 +97,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // 伪装最近任务：显示为"系统服务" + 灰色图标
         setTaskDescription(
             ActivityManager.TaskDescription(
                 "系统服务",
@@ -116,7 +120,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        // 绑定 Service 以获取实例（传递 SurfaceProvider）
         bindService(
             Intent(this, RecordingService::class.java),
             serviceConnection,
@@ -138,9 +141,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         applyPreviewMode()
-        // 每次 Resume 重新连接 Surface（防止 Surface 重建后失效）
         if (serviceBound) {
             connectPreviewToService()
+            syncRecordingState()
         }
     }
 
@@ -156,11 +159,15 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    /**
-     * 将 PreviewView 的 SurfaceProvider 传递给 Service
-     */
+    private fun syncRecordingState() {
+        val serviceRecording = recordingService?.isRecording ?: false
+        if (isRecording != serviceRecording) {
+            updateUI(serviceRecording)
+        }
+    }
+
     private fun connectPreviewToService() {
-        if (Prefs.getPreviewMode(this) != 0) return // 非预览模式不需要连接
+        if (Prefs.getPreviewMode(this) != 0) return
         val previewView = findViewById<androidx.camera.view.PreviewView>(R.id.previewView)
         recordingService?.updateSurfaceProvider(previewView.surfaceProvider)
     }
@@ -171,17 +178,17 @@ class MainActivity : AppCompatActivity() {
         val blankOverlay = findViewById<View>(R.id.blankOverlay)
 
         when (Prefs.getPreviewMode(this)) {
-            0 -> { // 实时预览
+            0 -> {
                 previewView.visibility = View.VISIBLE
                 statusOverlay.visibility = View.GONE
                 blankOverlay.visibility = View.GONE
             }
-            1 -> { // 录制状态
+            1 -> {
                 previewView.visibility = View.GONE
                 statusOverlay.visibility = View.VISIBLE
                 blankOverlay.visibility = View.GONE
             }
-            2 -> { // 空白
+            2 -> {
                 previewView.visibility = View.GONE
                 statusOverlay.visibility = View.GONE
                 blankOverlay.visibility = View.VISIBLE
@@ -231,17 +238,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStartRecording() {
-        try {
-            val serviceIntent = Intent(this, RecordingService::class.java).apply {
-                action = RecordingService.ACTION_START
-            }
+        val serviceIntent = Intent(this, RecordingService::class.java).apply {
+            action = RecordingService.ACTION_START
+        }
 
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent)
             } else {
                 startService(serviceIntent)
             }
-
+            updateUI(true)
             Toast.makeText(this, R.string.recording_started, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
@@ -253,6 +260,7 @@ class MainActivity : AppCompatActivity() {
             action = RecordingService.ACTION_STOP
         }
         startService(serviceIntent)
+        updateUI(false)
         Toast.makeText(this, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
     }
 

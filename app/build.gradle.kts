@@ -43,6 +43,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:${camerax_version}")
     implementation("androidx.camera:camera-video:${camerax_version}")
     implementation("androidx.camera:camera-view:1.3.1")
+    implementation("androidx.camera:camera-extensions:${camerax_version}")
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")

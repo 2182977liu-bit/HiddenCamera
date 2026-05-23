@@ -37,4 +37,17 @@
     <string name="shortcut_created">快捷图标已创建，长按桌面空白处可找到</string>
     <string name="quick_record_started">快速录制已开始</string>
     <string name="quick_record_stopped">录制已停止</string>
+    <string name="beauty_title">美颜美体设置</string>
+    <string name="beauty_enable">开启美颜</string>
+    <string name="beauty_enable_desc">在录制时应用美颜效果</string>
+    <string name="skin_smooth">磨皮</string>
+    <string name="skin_whiten">美白</string>
+    <string name="skin_rosy">红润</string>
+    <string name="face_slim">瘦脸</string>
+    <string name="eye_enlarge">大眼</string>
+    <string name="body_title">身材美体</string>
+    <string name="body_slim">瘦身</string>
+    <string name="leg_length">长腿</string>
+    <string name="waist_slim">瘦腰</string>
+    <string name="beauty_extension_unavailable">当前设备不支持硬件美颜扩展</string>
 </resources>
