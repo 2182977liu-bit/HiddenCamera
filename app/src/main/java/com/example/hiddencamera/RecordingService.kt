@@ -577,10 +577,6 @@ class RecordingService : Service(), LifecycleOwner {
                 "录制错误: 相机源失效（可能被其他应用占用）"
             VideoRecordEvent.Finalize.ERROR_ENCODER ->
                 "录制错误: 视频编码器异常"
-            VideoRecordEvent.Finalize.ERROR_MUXER ->
-                "录制错误: 视频封装异常"
-            VideoRecordEvent.Finalize.ERROR_RECORDER ->
-                "录制错误: 录制器异常"
             VideoRecordEvent.Finalize.ERROR_NO_VALID_DATA ->
                 "录制错误: 未产生有效数据"
             else -> "录制错误: ${event.cause?.message ?: "未知错误"}"
