@@ -1,11 +1,13 @@
 package com.example.hiddencamera
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.Build
 import android.os.Environment
@@ -424,13 +426,19 @@ class RecordingService : Service(), LifecycleOwner {
 
         videoCapture = videoCaptureBuilder.build()
 
-        previewUseCase = Preview.Builder().build()
-        previewSurfaceProvider?.let { sp ->
-            previewUseCase?.setSurfaceProvider(sp)
+        // 仅在有预览表面时才创建并绑定 Preview，
+        // 避免无 surface 的 Preview 在部分设备上导致相机启动失败
+        val preview = previewSurfaceProvider?.let { sp ->
+            Preview.Builder().build().also { it.setSurfaceProvider(sp) }
         }
+        previewUseCase = preview
 
         try {
-            provider.bindToLifecycle(this, cameraSelector, previewUseCase, videoCapture)
+            if (preview != null) {
+                provider.bindToLifecycle(this, cameraSelector, preview, videoCapture)
+            } else {
+                provider.bindToLifecycle(this, cameraSelector, videoCapture)
+            }
             startVideoCapture(outputFile)
         } catch (e: Exception) {
             Log.e(TAG, "绑定相机失败", e)
@@ -446,12 +454,22 @@ class RecordingService : Service(), LifecycleOwner {
         activeRecording = capture.output
             .prepareRecording(this, outputOptions)
             .apply {
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // 先检查录音权限，避免 withAudioEnabled 抛出 IllegalStateException
+                val hasAudioPermission = ContextCompat.checkSelfPermission(
+                    this@RecordingService,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasAudioPermission) {
+                    try {
                         withAudioEnabled()
+                    } catch (e: Exception) {
+                        // 捕获所有异常（IllegalStateException/SecurityException 等），
+                        // 音频失败时降级为仅录制视频，不影响主流程
+                        Log.w(TAG, "启用音频失败，仅录制视频", e)
                     }
-                } catch (e: SecurityException) {
-                    Log.w(TAG, "录音权限被拒绝，仅录制视频", e)
+                } else {
+                    Log.w(TAG, "无录音权限，仅录制视频")
                 }
             }
             .start(cameraExecutor) { event ->
@@ -470,9 +488,9 @@ class RecordingService : Service(), LifecycleOwner {
                             mainHandler.removeCallbacks(stopTimeoutRunnable)
 
                             if (event.hasError()) {
-                                val errorMsg = event.cause?.message ?: "未知录制错误"
-                                Log.e(TAG, "录制错误: $errorMsg", event.cause)
-                                updateState(RecordingState.Error("录制错误: $errorMsg"))
+                                val errorMsg = mapFinalizeError(event)
+                                Log.e(TAG, "录制错误: code=${event.error} $errorMsg", event.cause)
+                                updateState(RecordingState.Error(errorMsg))
                             } else {
                                 Log.d(TAG, "录制完成: ${outputFile.absolutePath}")
                                 updateState(RecordingState.Idle)
@@ -544,6 +562,29 @@ class RecordingService : Service(), LifecycleOwner {
         try {
             stopSelf()
         } catch (_: Exception) {}
+    }
+
+    /** 将 CameraX Finalize 错误码映射为可读信息 */
+    private fun mapFinalizeError(event: VideoRecordEvent.Finalize): String {
+        return when (event.error) {
+            VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED ->
+                "录制错误: 文件大小达到上限"
+            VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE ->
+                "录制错误: 存储空间不足"
+            VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED ->
+                "录制错误: 达到时长上限"
+            VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE ->
+                "录制错误: 相机源失效（可能被其他应用占用）"
+            VideoRecordEvent.Finalize.ERROR_ENCODER ->
+                "录制错误: 视频编码器异常"
+            VideoRecordEvent.Finalize.ERROR_MUXER ->
+                "录制错误: 视频封装异常"
+            VideoRecordEvent.Finalize.ERROR_RECORDER ->
+                "录制错误: 录制器异常"
+            VideoRecordEvent.Finalize.ERROR_NO_VALID_DATA ->
+                "录制错误: 未产生有效数据"
+            else -> "录制错误: ${event.cause?.message ?: "未知错误"}"
+        }
     }
 
     /** 统一状态更新入口 */
