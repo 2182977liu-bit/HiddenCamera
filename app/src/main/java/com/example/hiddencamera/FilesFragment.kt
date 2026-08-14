@@ -317,17 +317,29 @@ class FilesFragment : Fragment() {
     private fun updateStorageSummary(files: List<VideoFile>) {
         val totalBytes = files.sumOf { it.sizeBytes }
         val totalDuration = files.sumOf { it.durationMs }
-        val stat = android.os.StatFs(
-            File(android.os.Environment.DIRECTORY_DOWNLOADS, Constants.OUTPUT_DIR_NAME).absolutePath
-        )
-        val totalSpace = stat.totalBytes
-        val freeSpace = stat.availableBytes
-        val used = totalSpace - freeSpace
+        // 使用已存在的标准公共目录做 StatFs，避免对不存在的子目录调用抛异常导致闪退
+        val path = android.os.Environment.getExternalStoragePublicDirectory(
+            android.os.Environment.DIRECTORY_DOWNLOADS
+        ).absolutePath
+        val totalSpace: Long
+        val freeSpace: Long
+        try {
+            val stat = android.os.StatFs(path)
+            totalSpace = stat.totalBytes
+            freeSpace = stat.availableBytes
+        } catch (_: Exception) {
+            File(path).mkdirs()
+            totalSpace = 0L
+            freeSpace = 0L
+        }
+        val used = if (totalSpace > 0) totalSpace - freeSpace else 0L
 
         binding.tvStorageValue.text =
             String.format(Locale.US, "%.1f GB / %.1f GB", used / 1e9, totalSpace / 1e9)
         binding.storageBarFill.layoutParams = binding.storageBarFill.layoutParams.apply {
-            width = (binding.storageBar.width * (used.toFloat() / totalSpace)).toInt()
+            width = if (totalSpace > 0)
+                (binding.storageBar.width * (used.toFloat() / totalSpace)).toInt()
+            else 0
         }
         binding.tvFileCount.text = getString(R.string.file_count, files.size)
         binding.tvTotalDurationInfo.text = String.format(Locale.US, "%.1f 小时", totalDuration / 3.6e6)
