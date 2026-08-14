@@ -18,6 +18,8 @@
     <string name="notification_recording">后台同步中…</string>
     <string name="notification_text_recording">数据同步服务正在运行</string>
     <string name="permission_required">需要相机和录音权限</string>
+    <string name="permission_required_to_settings">录制需要相机和麦克风权限。请在系统设置中授予权限后重试。</string>
+    <string name="go_to_settings">去设置</string>
     <string name="recording_started">录制已开始</string>
     <string name="recording_stopped">录制已停止</string>
     <string name="select_camera">选择摄像头</string>
@@ -139,6 +141,7 @@
     <string name="back">后置</string>
     <string name="front">前置</string>
     <string name="mirror_flip">镜像翻转</string>
+    <string name="coming_soon">该功能开发中，敬请期待</string>
     <string name="exposure_comp">曝光补偿</string>
     <string name="white_balance">白平衡</string>
     <string name="auto">自动</string>
@@ -153,6 +156,7 @@
     <string name="bitrate">码率</string>
     <string name="encoding_format">编码格式</string>
     <string name="max_record_duration">最大录制时长</string>
+    <string name="max_record_duration_value">30 分钟</string>
     <string name="segment_record">分段录制</string>
     <string name="every_30min">每 30 分钟</string>
     <string name="audio_source">音频来源</string>

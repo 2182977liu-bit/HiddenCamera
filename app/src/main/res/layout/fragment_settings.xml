@@ -211,7 +211,7 @@
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_timer" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/max_record_duration" />
-                    <TextView style="@style/Widget.RowValue" android:text="60 分钟" />
+                    <TextView style="@style/Widget.RowValue" android:text="@string/max_record_duration_value" />
                 </LinearLayout>
 
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">

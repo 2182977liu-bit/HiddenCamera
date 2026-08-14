@@ -116,7 +116,7 @@ class SettingsFragment : Fragment() {
 
         binding.switchMirror.isChecked = false
         binding.switchMirror.setOnCheckedChangeListener { _, _ ->
-            Toast.makeText(ctx, R.string.mirror_flip, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.coming_soon, Toast.LENGTH_SHORT).show()
         }
         bindSlider(binding.seekExposure, binding.tvExposure, 0, "%+d") {
             // 曝光补偿仅作展示，实际范围 -5..+5
@@ -194,7 +194,7 @@ class SettingsFragment : Fragment() {
 
         binding.switchNoiseReduce.isChecked = true
         binding.switchNoiseReduce.setOnCheckedChangeListener { _, _ ->
-            Toast.makeText(ctx, R.string.noise_reduction, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.coming_soon, Toast.LENGTH_SHORT).show()
         }
         bindSlider(binding.seekVolume, binding.tvVolume, 80, "%d") {
             // 音量仅作展示
@@ -215,7 +215,7 @@ class SettingsFragment : Fragment() {
 
         binding.switchFloating.isChecked = false
         binding.switchFloating.setOnCheckedChangeListener { _, _ ->
-            Toast.makeText(ctx, R.string.enable_floating, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.coming_soon, Toast.LENGTH_SHORT).show()
         }
         bindSlider(binding.seekFloatOpacity, binding.tvFloatOpacity, 60, "%d%%") {
             // 透明度仅作展示
@@ -223,7 +223,7 @@ class SettingsFragment : Fragment() {
 
         binding.switchCallStop.isChecked = true
         binding.switchCallStop.setOnCheckedChangeListener { _, _ ->
-            Toast.makeText(ctx, R.string.call_auto_stop, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.coming_soon, Toast.LENGTH_SHORT).show()
         }
     }
 

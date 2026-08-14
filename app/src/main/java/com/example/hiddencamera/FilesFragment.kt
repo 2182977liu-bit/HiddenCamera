@@ -172,8 +172,23 @@ class FilesFragment : Fragment() {
         }
     }
 
-    private fun currentItems(): List<VideoFile> =
-        allFiles.filter { if (filter == 0) true else it.name.contains("VID") }
+    private fun currentItems(): List<VideoFile> = when (filter) {
+        1 -> allFiles.filter { isVideoFile(it.name) }
+        2 -> allFiles.filter { isImageFile(it.name) }
+        else -> allFiles
+    }
+
+    private fun isVideoFile(name: String): Boolean {
+        val n = name.lowercase(Locale.US)
+        return n.endsWith(".mp4") || n.endsWith(".mkv") ||
+            n.endsWith(".3gp") || n.endsWith(".webm")
+    }
+
+    private fun isImageFile(name: String): Boolean {
+        val n = name.lowercase(Locale.US)
+        return n.endsWith(".jpg") || n.endsWith(".jpeg") ||
+            n.endsWith(".png") || n.endsWith(".webp")
+    }
 
     private fun getVisibleFilesForSelection(): List<VideoFile> =
         currentItems().filter { adapter.isSelected(it.id) }

@@ -18,7 +18,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -26,6 +25,13 @@ import com.example.hiddencamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG_RECORD = "record"
+        private const val TAG_FILES = "files"
+        private const val TAG_SETTINGS = "settings"
+        private const val KEY_CURRENT_TAG = "current_fragment_tag"
+    }
 
     private lateinit var binding: ActivityMainBinding
 
@@ -36,6 +42,9 @@ class MainActivity : AppCompatActivity() {
 
     /** 当前活跃的录制页实例，用于连接预览表面 */
     private var recordFragment: RecordFragment? = null
+
+    /** 当前显示的 Tab 标签（hide/show 用） */
+    private var currentFragmentTag: String? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -65,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         if (cameraGranted && audioGranted && notifGranted) {
             checkStoragePermissionAndStart()
         } else {
-            Toast.makeText(this, R.string.permission_required, Toast.LENGTH_SHORT).show()
+            showPermissionGuidance()
         }
     }
 
@@ -96,16 +105,20 @@ class MainActivity : AppCompatActivity() {
             )
         )
 
-        // 底部导航：切换三个 Tab
+        // 底部导航：切换三个 Tab（hide/show 保留各页状态，避免反复重建）
         binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_record -> showFragment(RecordFragment())
-                R.id.nav_files -> showFragment(FilesFragment())
-                R.id.nav_settings -> showFragment(SettingsFragment())
-            }
+            showFragment(itemIdToTag(item.itemId))
             true
         }
-        binding.bottomNav.selectedItemId = R.id.nav_record
+
+        // 恢复进程状态时同步底部导航与当前页；否则默认进入录制页
+        if (savedInstanceState == null) {
+            currentFragmentTag = null
+            binding.bottomNav.selectedItemId = R.id.nav_record
+        } else {
+            currentFragmentTag = savedInstanceState.getString(KEY_CURRENT_TAG)
+            binding.bottomNav.setSelectedItemId(tagToItemId(currentFragmentTag))
+        }
 
         bindService(
             Intent(this, RecordingService::class.java),
@@ -114,6 +127,11 @@ class MainActivity : AppCompatActivity() {
         )
 
         observeErrors()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_CURRENT_TAG, currentFragmentTag)
     }
 
     override fun onResume() {
@@ -154,19 +172,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showFragment(fragment: Fragment) {
-        val supportFragmentManager = supportFragmentManager
-        // 清理当前栈，避免多个实例叠加
-        if (supportFragmentManager.backStackEntryCount > 0) {
-            supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        }
-        supportFragmentManager.beginTransaction()
-            .replace(binding.fragmentContainer.id, fragment)
-            .commit()
+    private fun showFragment(tag: String) {
+        val fm = supportFragmentManager
+        val transaction = fm.beginTransaction()
 
-        if (fragment is RecordFragment) {
-            recordFragment = fragment
+        // 隐藏当前页
+        currentFragmentTag?.let { old ->
+            fm.findFragmentByTag(old)?.let { transaction.hide(it) }
         }
+
+        // 显示已有实例或创建新实例
+        var target = fm.findFragmentByTag(tag)
+        if (target == null) {
+            target = when (tag) {
+                TAG_FILES -> FilesFragment()
+                TAG_SETTINGS -> SettingsFragment()
+                else -> RecordFragment()
+            }
+            transaction.add(binding.fragmentContainer.id, target, tag)
+        } else {
+            transaction.show(target)
+        }
+        transaction.commit()
+
+        currentFragmentTag = tag
+        if (target is RecordFragment) {
+            recordFragment = target
+        }
+    }
+
+    private fun itemIdToTag(itemId: Int): String = when (itemId) {
+        R.id.nav_files -> TAG_FILES
+        R.id.nav_settings -> TAG_SETTINGS
+        else -> TAG_RECORD
+    }
+
+    private fun tagToItemId(tag: String?): Int = when (tag) {
+        TAG_FILES -> R.id.nav_files
+        TAG_SETTINGS -> R.id.nav_settings
+        else -> R.id.nav_record
     }
 
     private fun connectPreview(sp: androidx.camera.core.Preview.SurfaceProvider?) {
@@ -209,6 +253,13 @@ class MainActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
 
+        // 来电自动停止所需；拒绝不影响录制，仅关闭来电监听
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissions.add(Manifest.permission.READ_PHONE_STATE)
+        }
+
         val needed = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
@@ -234,6 +285,21 @@ class MainActivity : AppCompatActivity() {
         } else {
             doStartRecording()
         }
+    }
+
+    /** 核心权限被拒时二次引导，跳转系统设置 */
+    private fun showPermissionGuidance() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.permission_required)
+            .setMessage(R.string.permission_required_to_settings)
+            .setPositiveButton(R.string.go_to_settings) { _, _ ->
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun doStartRecording() {
