@@ -188,6 +188,10 @@
     </style>
 
     <!-- ===== 设计稿 Recorder 样式族 ===== -->
+    <!-- 基类：供 Widget.Recorder.* / TextAppearance.Recorder.* 隐式继承解析 -->
+    <style name="Widget.Recorder" parent="" />
+    <style name="TextAppearance.Recorder" parent="" />
+
     <style name="Widget.Recorder.Divider">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
