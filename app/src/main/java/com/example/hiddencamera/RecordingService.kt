@@ -14,6 +14,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.os.StatFs
 import android.util.Log
 import android.util.Range
@@ -91,6 +92,9 @@ class RecordingService : Service(), LifecycleOwner {
 
     private var recordingStartTime = 0L
     private var currentOutputFile: File? = null
+
+    /** 录制期间持有的部分唤醒锁，防止息屏后 CPU 休眠/Doze 中断相机录制 */
+    private var wakeLock: PowerManager.WakeLock? = null
 
     /** 最大时长 Runnable */
     private val maxDurationRunnable = Runnable {
@@ -186,6 +190,7 @@ class RecordingService : Service(), LifecycleOwner {
         mainHandler.removeCallbacks(maxDurationRunnable)
         mainHandler.removeCallbacks(stopTimeoutRunnable)
 
+        releaseWakeLock()
         activeRecording = null
         videoCapture = null
         previewUseCase = null
@@ -328,6 +333,7 @@ class RecordingService : Service(), LifecycleOwner {
 
     private fun startRecording() {
         try {
+            acquireWakeLock()
             val outputDir = getOutputDir()
             if (!outputDir.exists()) {
                 val created = outputDir.mkdirs()
@@ -538,6 +544,7 @@ class RecordingService : Service(), LifecycleOwner {
         mainHandler.removeCallbacks(maxDurationRunnable)
         mainHandler.removeCallbacks(stopTimeoutRunnable)
 
+        releaseWakeLock()
         videoCapture = null
         previewUseCase = null
         try {
@@ -579,6 +586,35 @@ class RecordingService : Service(), LifecycleOwner {
                 "录制错误: 未产生有效数据"
             else -> "录制错误: ${event.cause?.message ?: "未知错误"}"
         }
+    }
+
+    /** 录制期间获取部分唤醒锁（息屏后保持 CPU 与相机活跃） */
+    private fun acquireWakeLock() {
+        try {
+            if (wakeLock?.isHeld == true) return
+            val pm = getSystemService(PowerManager::class.java)
+            wakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "$packageName:recording"
+            ).apply {
+                setReferenceCounted(false)
+                acquire(Constants.MAX_RECORDING_DURATION_MS + 60_000L)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "获取唤醒锁失败（不影响录制）", e)
+            wakeLock = null
+        }
+    }
+
+    /** 释放部分唤醒锁 */
+    private fun releaseWakeLock() {
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (_: Exception) {
+        }
+        wakeLock = null
     }
 
     /** 统一状态更新入口 */

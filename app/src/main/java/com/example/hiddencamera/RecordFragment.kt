@@ -54,6 +54,9 @@ class RecordFragment : Fragment() {
 
     /** 把预览表面交给服务 */
     fun connectPreview() {
+        // 视图未创建或已销毁（例如切到其它 Tab 后 Activity 恢复、或服务绑定先于 Fragment 视图创建）时，
+        // 直接返回，避免访问空 binding 导致闪退
+        if (_binding == null) return
         if (Prefs.getPreviewMode(requireContext()) != 0) return
         mainActivity?.connectPreviewFromFragment(binding.previewView.surfaceProvider)
     }

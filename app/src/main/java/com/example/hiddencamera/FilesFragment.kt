@@ -1,6 +1,7 @@
 package com.example.hiddencamera
 
 import android.content.ContentUris
+import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.LayoutInflater
@@ -11,13 +12,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.hiddencamera.databinding.FragmentFilesBinding
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -195,8 +196,9 @@ class FilesFragment : Fragment() {
     }
 
     private fun doDelete(files: List<VideoFile>) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val resolver = requireContext().contentResolver
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val resolver = ctx.contentResolver
             for (file in files) {
                 try {
                     resolver.delete(file.uri, null, null)
@@ -204,27 +206,31 @@ class FilesFragment : Fragment() {
                 }
             }
             withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
                 adapter.clearSelection()
                 updateMultiBar()
                 loadFiles()
-                Toast.makeText(requireContext(), R.string.delete_success, Toast.LENGTH_SHORT).show()
+                Toast.makeText(ctx, R.string.delete_success, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     // ===== MediaStore 扫描 =====
     private fun loadFiles() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val files = scanVideos()
+        // 先在主线程捕获 attachment 上的 context，避免 Fragment 销毁后 requireContext() 抛异常
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val files = scanVideos(ctx)
             withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
                 allFiles = files
                 renderList()
             }
         }
     }
 
-    private fun scanVideos(): List<VideoFile> {
-        val resolver = requireContext().contentResolver
+    private fun scanVideos(ctx: Context): List<VideoFile> {
+        val resolver = ctx.contentResolver
         val result = mutableListOf<VideoFile>()
         val collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         val projection = arrayOf(
