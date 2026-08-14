@@ -46,7 +46,7 @@ class RecordingService : Service(), LifecycleOwner {
     companion object {
         private const val TAG = "RecordingService"
 
-        private fun getOutputDir(): File {
+        fun getOutputDir(): File {
             return File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 Constants.OUTPUT_DIR_NAME

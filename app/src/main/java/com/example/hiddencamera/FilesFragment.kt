@@ -1,9 +1,9 @@
 package com.example.hiddencamera
 
-import android.content.ContentUris
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.content.Context
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -213,10 +213,9 @@ class FilesFragment : Fragment() {
     private fun doDelete(files: List<VideoFile>) {
         val ctx = requireContext()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val resolver = ctx.contentResolver
-            for (file in files) {
+            for (vf in files) {
                 try {
-                    resolver.delete(file.uri, null, null)
+                    vf.file.delete()
                 } catch (_: Exception) {
                 }
             }
@@ -245,51 +244,44 @@ class FilesFragment : Fragment() {
     }
 
     private fun scanVideos(ctx: Context): List<VideoFile> {
-        val resolver = ctx.contentResolver
-        val result = mutableListOf<VideoFile>()
-        val collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(
-            MediaStore.Video.Media._ID,
-            MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.SIZE,
-            MediaStore.Video.Media.DURATION,
-            MediaStore.Video.Media.DATE_TAKEN,
-            MediaStore.Video.Media.RELATIVE_PATH
-        )
-        val selection = "${MediaStore.Video.Media.RELATIVE_PATH} LIKE ? OR " +
-            "${MediaStore.Video.Media.DATA} LIKE ?"
-        val selectionArgs = arrayOf("%${Constants.OUTPUT_DIR_NAME}%", "%${Constants.OUTPUT_DIR_NAME}%")
+        val dir = RecordingService.getOutputDir()
+        if (!dir.exists() || !dir.isDirectory) return emptyList()
 
-        try {
-            resolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
-                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE)
-                val durCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
-                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_TAKEN)
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idCol)
-                    val name = cursor.getString(nameCol) ?: ""
-                    val size = cursor.getLong(sizeCol)
-                    val duration = cursor.getLong(durCol)
-                    val dateTaken = cursor.getLong(dateCol)
-                    val uri = ContentUris.withAppendedId(collection, id)
-                    result.add(
-                        VideoFile(
-                            id = id,
-                            uri = uri,
-                            name = name,
-                            sizeBytes = size,
-                            durationMs = duration,
-                            dateTaken = dateTaken,
-                            groupKey = groupKeyFor(dateTaken)
-                        )
-                    )
-                }
+        val files = dir.listFiles()?.filter { it.isFile && isVideoFile(it.name) } ?: return emptyList()
+        val now = System.currentTimeMillis()
+
+        return files.mapNotNull { f ->
+            try {
+                val dateTaken = f.lastModified().takeIf { it > 0 } ?: now
+                VideoFile(
+                    id = f.path.hashCode().toLong(),
+                    uri = Uri.fromFile(f),
+                    name = f.name,
+                    sizeBytes = f.length(),
+                    durationMs = videoDurationMs(f),
+                    dateTaken = dateTaken,
+                    groupKey = groupKeyFor(dateTaken),
+                    file = f
+                )
+            } catch (_: Exception) {
+                null
             }
+        }.sortedByDescending { it.dateTaken }
+    }
+
+    /** 读取视频时长（毫秒） */
+    private fun videoDurationMs(file: File): Long {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(file.absolutePath)
+            val ms = retriever.extractMetadata(
+                MediaMetadataRetriever.METADATA_KEY_DURATION
+            )?.toLongOrNull() ?: 0L
+            retriever.release()
+            ms
         } catch (_: Exception) {
+            0L
         }
-        return result.sortedByDescending { it.dateTaken }
     }
 
     private fun groupKeyFor(millis: Long): String {

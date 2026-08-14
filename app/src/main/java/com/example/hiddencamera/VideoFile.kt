@@ -1,6 +1,7 @@
 package com.example.hiddencamera
 
 import android.net.Uri
+import java.io.File
 
 /** 单个录像文件（含日期分组信息） */
 data class VideoFile(
@@ -10,5 +11,6 @@ data class VideoFile(
     val sizeBytes: Long,
     val durationMs: Long,
     val dateTaken: Long,
-    val groupKey: String
+    val groupKey: String,
+    val file: File
 )
