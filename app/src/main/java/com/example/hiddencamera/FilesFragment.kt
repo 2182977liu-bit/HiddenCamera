@@ -321,16 +321,14 @@ class FilesFragment : Fragment() {
         val path = android.os.Environment.getExternalStoragePublicDirectory(
             android.os.Environment.DIRECTORY_DOWNLOADS
         ).absolutePath
-        val totalSpace: Long
-        val freeSpace: Long
+        var totalSpace: Long = 0L
+        var freeSpace: Long = 0L
         try {
             val stat = android.os.StatFs(path)
             totalSpace = stat.totalBytes
             freeSpace = stat.availableBytes
         } catch (_: Exception) {
             File(path).mkdirs()
-            totalSpace = 0L
-            freeSpace = 0L
         }
         val used = if (totalSpace > 0) totalSpace - freeSpace else 0L
 
