@@ -56,6 +56,14 @@
     <color name="overlay_light">#99000000</color>
     <color name="overlay_gradient_bottom">#CC0B0F14</color>
     <color name="black_overlay_40">#66000000</color>
+    <color name="black_overlay_60">#99000000</color>
+
+    <!-- 品牌主色别名（drawable 引用） -->
+    <color name="brand_primary">#FF14B8A6</color>
+
+    <!-- 状态徽标背景（drawable 引用） -->
+    <color name="success_badge_bg">#262EA043</color>
+    <color name="warning_badge_bg">#26D29922</color>
 
     <!-- 品牌色阶（供部分 drawable/tint 使用） -->
     <color name="brand_50">#F0FDFA</color>
