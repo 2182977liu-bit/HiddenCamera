@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/itemRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_file_item"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="10dp">
+
+    <!-- 缩略图 -->
+    <FrameLayout
+        android:id="@+id/thumb"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_thumbnail"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_play"
+            android:tint="@color/ink_3" />
+
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="2dp"
+            android:layout_marginBottom="2dp"
+            android:background="@drawable/bg_duration"
+            android:fontFamily="monospace"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            tools:text="12:34" />
+    </FrameLayout>
+
+    <!-- 信息 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/ink"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="屏幕录制_20260814_143022" />
+
+        <TextView
+            android:id="@+id/tvSub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/ink_2"
+            android:textSize="11sp"
+            tools:text="14:30 · 48.2 MB · 1080p" />
+    </LinearLayout>
+
+    <!-- 多选圆圈 -->
+    <ImageView
+        android:id="@+id/checkbox"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/bg_checkbox_circle"
+        android:contentDescription="@string/details" />
+</LinearLayout>

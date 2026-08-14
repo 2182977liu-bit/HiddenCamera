@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 设置行背景：圆角表面 + 底部细分隔线 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/bg_row_surface" />
+    <item
+        android:gravity="bottom"
+        android:left="16dp"
+        android:right="16dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/line" />
+        </shape>
+    </item>
+</layer-list>

@@ -2,18 +2,49 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="primary">#FF1976D2</color>
-    <color name="primary_dark">#FF1565C0</color>
-    <color name="accent">#FF448AFF</color>
-    <color name="recording_red">#FFF44336</color>
-    <color name="bg_light">#FFF5F5F5</color>
+    <color name="transparent">#00000000</color>
 
-    <!-- 语义化颜色（替代硬编码） -->
-    <color name="text_primary">#FF333333</color>
-    <color name="text_secondary">#FF666666</color>
-    <color name="text_hint">#FF999999</color>
-    <color name="overlay_dark">#80000000</color>
-    <color name="divider">#FFEEEEEE</color>
-    <color name="beauty_accent">#FFFF6B9C</color>
-    <color name="warning">#FFFF9800</color>
+    <!-- ===== 保留现有引用名（值调整为新主题） ===== -->
+    <!-- 主品牌色：teal -->
+    <color name="primary">#FF14B8A6</color>
+    <color name="primary_dark">#FF0D9488</color>
+    <color name="accent">#FF14B8A6</color>
+    <color name="recording_red">#FFF85149</color>
+
+    <!-- 语义化颜色（兼容旧引用） -->
+    <color name="text_primary">#FFF0F6FC</color>
+    <color name="text_secondary">#FF8B949E</color>
+    <color name="text_hint">#FF57606A</color>
+    <color name="overlay_dark">#99000000</color>
+    <color name="divider">#FF252E3A</color>
+    <color name="beauty_accent">#FF14B8A6</color>
+    <color name="warning">#FFD29922</color>
+
+    <color name="bg_light">#FF0B0F14</color>
+
+    <!-- ===== 设计 Token（深色 teal 主题） ===== -->
+    <!-- 背景 & 表面 -->
+    <color name="bg">#FF0B0F14</color>
+    <color name="surface">#FF141B24</color>
+    <color name="surface_2">#FF1C2530</color>
+    <color name="surface_3">#FF242F3D</color>
+
+    <!-- 文本 -->
+    <color name="ink">#FFF0F6FC</color>
+    <color name="ink_2">#FF8B949E</color>
+    <color name="ink_3">#FF57606A</color>
+
+    <!-- 线条 -->
+    <color name="line">#FF252E3A</color>
+    <color name="line_strong">#FF30363D</color>
+
+    <!-- 品牌 -->
+    <color name="brand">#FF14B8A6</color>
+    <color name="brand_ink">#FF062020</color>
+
+    <!-- 状态色 -->
+    <color name="state_error">#FFF85149</color>
+    <color name="state_success">#FF2EA043</color>
+    <color name="state_warning">#FFD29922</color>
+    <color name="state_info">#FF388BFD</color>
 </resources>

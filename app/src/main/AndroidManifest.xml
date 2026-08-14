@@ -37,12 +37,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".SettingsActivity"
-            android:label="@string/settings"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait" />
-
         <!-- 透明中转 Activity，用于桌面快捷方式后台切换录制 -->
         <activity
             android:name=".ToggleRecordingActivity"

@@ -54,6 +54,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
     implementation("androidx.activity:activity-ktx:1.8.2")
 
+    // Fragment / Navigation (三 Tab 架构)
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 

@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <!-- 顶部栏 -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/surface">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="16dp"
+            android:text="@string/tab_settings"
+            android:textColor="@color/ink"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- ===== 美颜美体 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_beauty" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_sparkles" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/beauty_master_switch" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchBeauty"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_waves" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/skin_smooth" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekSkinSmooth"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvSkinSmooth" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_sun" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/skin_whiten" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekSkinWhiten"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvSkinWhiten" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_heart" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/skin_rosy" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekSkinRosy"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvSkinRosy" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_user" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/face_slim" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekFaceSlim"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvFaceSlim" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_person" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/eye_enlarge" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekEyeEnlarge"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvEyeEnlarge" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_person" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/body_beauty" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchBodyBeauty"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 摄像头设置 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_camera" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_camera" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/default_camera" />
+                    <LinearLayout style="@style/Widget.ChipGroup" android:orientation="horizontal">
+                        <TextView android:id="@+id/chipCameraBack" style="@style/Widget.SettingsChip.Small" android:text="@string/back" />
+                        <TextView android:id="@+id/chipCameraFront" style="@style/Widget.SettingsChip.Small" android:text="@string/front" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_flip" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/mirror_flip" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchMirror"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_sun" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/exposure_comp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekExposure"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvExposure" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_focus" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/focus_mode" />
+                    <TextView style="@style/Widget.RowValue" android:text="@string/auto" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 录制质量 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_quality" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_monitor" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/resolution" />
+                    <LinearLayout style="@style/Widget.ChipGroup" android:orientation="horizontal">
+                        <TextView android:id="@+id/chipRes0" style="@style/Widget.SettingsChip.Small" android:text="720p" />
+                        <TextView android:id="@+id/chipRes1" style="@style/Widget.SettingsChip.Small" android:text="1080p" />
+                        <TextView android:id="@+id/chipRes2" style="@style/Widget.SettingsChip.Small" android:text="4K" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_film" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/frame_rate" />
+                    <LinearLayout style="@style/Widget.ChipGroup" android:orientation="horizontal">
+                        <TextView android:id="@+id/chipFps0" style="@style/Widget.SettingsChip.Small" android:text="24fps" />
+                        <TextView android:id="@+id/chipFps1" style="@style/Widget.SettingsChip.Small" android:text="30fps" />
+                        <TextView android:id="@+id/chipFps2" style="@style/Widget.SettingsChip.Small" android:text="60fps" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_volume" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/bitrate" />
+                    <TextView style="@style/Widget.RowValue" android:text="8 Mbps" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_monitor" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/encoding_format" />
+                    <TextView style="@style/Widget.RowValue" android:text="H.264" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_timer" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/max_record_duration" />
+                    <TextView style="@style/Widget.RowValue" android:text="60 分钟" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_timer" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/segment_record" />
+                    <TextView android:id="@+id/tvSegmentDuration" style="@style/Widget.RowValue" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchSegment"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 音频设置 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_audio" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_mic" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/audio_source" />
+                    <TextView style="@style/Widget.RowValue" android:text="@string/microphone" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_volume" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/noise_reduction" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchNoiseReduce"
+                        style="@style/Widget.RowSwitch"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_volume" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/record_volume" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekVolume"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvVolume" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 预览模式 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_preview" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_eye" />
+                    <LinearLayout style="@style/Widget.RowTextStack" android:orientation="vertical">
+                        <TextView style="@style/Widget.RowLabel" android:text="@string/live_preview" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPreviewLive"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_activity" />
+                    <LinearLayout style="@style/Widget.RowTextStack" android:orientation="vertical">
+                        <TextView style="@style/Widget.RowLabel" android:text="@string/status_display" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPreviewStatus"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_square" />
+                    <LinearLayout style="@style/Widget.RowTextStack" android:orientation="vertical">
+                        <TextView style="@style/Widget.RowLabel" android:text="@string/blank_disguise" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPreviewBlank"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 通知设置 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_notification" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_bell" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/notification_quick_btn" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchNotificationAction"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_bell" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/notification_disguise" />
+                    <TextView style="@style/Widget.RowValue" android:text="@string/app_name" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 快捷方式 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_shortcut" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_home" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/desktop_shortcut" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchShortcut"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_plus" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/create_shortcut_action" />
+                    <TextView
+                        android:id="@+id/btnCreateShortcut"
+                        style="@style/Widget.AddButton"
+                        android:text="@string/add" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 存储设置 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_storage" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_folder" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/save_location" />
+                    <TextView android:id="@+id/tvSaveLocation" style="@style/Widget.RowValue" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_trash" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/single_file_limit" />
+                    <TextView style="@style/Widget.RowValue" android:text="2 GB" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 悬浮窗 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_floating" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_square" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/enable_floating" />
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchFloating"
+                        style="@style/Widget.RowSwitch" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_sun" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/floating_opacity" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/seekFloatOpacity"
+                        style="@style/Widget.RowSlider" />
+                    <TextView android:id="@+id/tvFloatOpacity" style="@style/Widget.SliderValue" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 来电处理 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_call" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_phone_off" />
+                    <LinearLayout style="@style/Widget.RowTextStack" android:orientation="vertical">
+                        <TextView style="@style/Widget.RowLabel" android:text="@string/call_auto_stop" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchCallStop"
+                        style="@style/Widget.RowSwitch"
+                        android:checked="true" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 权限管理 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_permission" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_mic" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/permission_mic" />
+                    <TextView android:id="@+id/tvPermMic" style="@style/Widget.StatusBadge" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_folder" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/permission_storage" />
+                    <TextView android:id="@+id/tvPermStorage" style="@style/Widget.StatusBadge" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===== 关于 ===== -->
+            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_about" />
+            <LinearLayout style="@style/Widget.SettingsCard">
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_info" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/version" />
+                    <TextView style="@style/Widget.RowValueMono" android:text="v1.2" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_info" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/feedback_help" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

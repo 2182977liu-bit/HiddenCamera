@@ -12,34 +12,30 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.IBinder
 import android.provider.Settings
-import android.view.View
-import android.widget.ImageButton
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.google.android.material.button.MaterialButton
-import kotlinx.coroutines.delay
+import com.example.hiddencamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var btnRecord: MaterialButton
-    private lateinit var tvDuration: TextView
-    private lateinit var tvStatus: TextView
-    private lateinit var recordingOverlay: View
-    private lateinit var indicatorPulse: View
+    private lateinit var binding: ActivityMainBinding
+
+    val viewModel: MainViewModel by viewModels()
 
     private var recordingService: RecordingService? = null
     private var serviceBound = false
 
-    private val viewModel: MainViewModel by viewModels()
+    /** 当前活跃的录制页实例，用于连接预览表面 */
+    private var recordFragment: RecordFragment? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -47,7 +43,7 @@ class MainActivity : AppCompatActivity() {
             recordingService = binder.getService()
             serviceBound = true
             viewModel.bindService(recordingService)
-            connectPreviewToService()
+            recordFragment?.connectPreview()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -89,37 +85,27 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            setTaskDescription(
-                ActivityManager.TaskDescription(
-                    getString(R.string.app_name),
-                    R.mipmap.ic_launcher,
-                    getColor(R.color.primary)
-                )
+        setTaskDescription(
+            ActivityManager.TaskDescription(
+                getString(R.string.app_name),
+                R.mipmap.ic_launcher,
+                getColor(R.color.primary)
             )
-        }
+        )
 
-        btnRecord = findViewById(R.id.btnRecord)
-        tvDuration = findViewById(R.id.tvDuration)
-        tvStatus = findViewById(R.id.tvStatus)
-        recordingOverlay = findViewById(R.id.recordingOverlay)
-        indicatorPulse = findViewById(R.id.indicatorPulse)
-        val btnSettings = findViewById<ImageButton>(R.id.btnSettings)
-
-        btnRecord.setOnClickListener {
-            val state = viewModel.uiState.value
-            if (state.isRecording || state.isStopping) {
-                stopRecording()
-            } else {
-                checkPermissionsAndStart()
+        // 底部导航：切换三个 Tab
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_record -> showFragment(RecordFragment())
+                R.id.nav_files -> showFragment(FilesFragment())
+                R.id.nav_settings -> showFragment(SettingsFragment())
             }
+            true
         }
-
-        btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
+        binding.bottomNav.selectedItemId = R.id.nav_record
 
         bindService(
             Intent(this, RecordingService::class.java),
@@ -127,45 +113,12 @@ class MainActivity : AppCompatActivity() {
             Context.BIND_AUTO_CREATE
         )
 
-        observeUiState()
-    }
-
-    /**
-     * 监听 ViewModel 状态并更新 UI
-     *
-     * 关键改进：UI 状态完全由 Service 通过 StateFlow 驱动，
-     * 不再依赖 BroadcastReceiver，避免状态不一致。
-     */
-    private fun observeUiState() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    updateUI(state)
-                }
-            }
-        }
-
-        // 录制时长更新协程
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                while (true) {
-                    val state = viewModel.uiState.value
-                    if (state.isRecording) {
-                        val duration = viewModel.getCurrentDuration(System.currentTimeMillis())
-                        tvDuration.text = formatDuration(duration)
-                    }
-                    delay(500)
-                }
-            }
-        }
+        observeErrors()
     }
 
     override fun onResume() {
         super.onResume()
-        applyPreviewMode()
-        if (serviceBound) {
-            connectPreviewToService()
-        }
+        recordFragment?.connectPreview()
     }
 
     override fun onDestroy() {
@@ -179,34 +132,59 @@ class MainActivity : AppCompatActivity() {
         viewModel.unbindService()
     }
 
-    private fun connectPreviewToService() {
-        if (Prefs.getPreviewMode(this) != 0) return
-        val previewView = findViewById<androidx.camera.view.PreviewView>(R.id.previewView)
-        recordingService?.updateSurfaceProvider(previewView.surfaceProvider)
-    }
-
-    private fun applyPreviewMode() {
-        val previewView = findViewById<androidx.camera.view.PreviewView>(R.id.previewView)
-        val statusOverlay = findViewById<View>(R.id.statusOverlay)
-        val blankOverlay = findViewById<View>(R.id.blankOverlay)
-
-        when (Prefs.getPreviewMode(this)) {
-            0 -> {
-                previewView.visibility = View.VISIBLE
-                statusOverlay.visibility = View.GONE
-                blankOverlay.visibility = View.GONE
-            }
-            1 -> {
-                previewView.visibility = View.GONE
-                statusOverlay.visibility = View.VISIBLE
-                blankOverlay.visibility = View.GONE
-            }
-            2 -> {
-                previewView.visibility = View.GONE
-                statusOverlay.visibility = View.GONE
-                blankOverlay.visibility = View.VISIBLE
+    /** ViewModel 观察错误，统一用 Toast 提示 */
+    private fun observeErrors() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    if (state.showError && state.errorMessage != null) {
+                        Toast.makeText(this@MainActivity, state.errorMessage, Toast.LENGTH_LONG).show()
+                        viewModel.errorShown()
+                    }
+                }
             }
         }
+    }
+
+    private fun showFragment(fragment: Fragment) {
+        val supportFragmentManager = supportFragmentManager
+        // 清理当前栈，避免多个实例叠加
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
+        supportFragmentManager.beginTransaction()
+            .replace(binding.fragmentContainer.id, fragment)
+            .commit()
+
+        if (fragment is RecordFragment) {
+            recordFragment = fragment
+        }
+    }
+
+    private fun connectPreview(sp: androidx.camera.core.Preview.SurfaceProvider?) {
+        recordingService?.updateSurfaceProvider(sp)
+    }
+
+    // ===== 供 Fragment 调用的公开接口 =====
+
+    /** 录制页视图就绪后调用，把预览表面交给服务 */
+    fun connectPreviewFromFragment(sp: androidx.camera.core.Preview.SurfaceProvider?) {
+        connectPreview(sp)
+    }
+
+    fun currentIsRecording(): Boolean = viewModel.uiState.value.isRecording
+    fun currentIsStopping(): Boolean = viewModel.uiState.value.isStopping
+
+    fun startRecording() {
+        checkPermissionsAndStart()
+    }
+
+    fun stopRecording() {
+        val serviceIntent = Intent(this, RecordingService::class.java).apply {
+            action = Constants.ACTION_STOP
+        }
+        startService(serviceIntent)
+        Toast.makeText(this, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
     }
 
     private fun checkPermissionsAndStart() {
@@ -251,7 +229,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStartRecording() {
-        // 录制前检查存储空间
         if (!RecordingService.hasEnoughStorage()) {
             Toast.makeText(this, R.string.storage_insufficient, Toast.LENGTH_LONG).show()
             return
@@ -269,7 +246,6 @@ class MainActivity : AppCompatActivity() {
             }
             Toast.makeText(this, R.string.recording_started, Toast.LENGTH_SHORT).show()
 
-            // 启动来电监听
             PhoneCallDetector.start(this) {
                 runOnUiThread {
                     if (viewModel.uiState.value.isRecording) {
@@ -289,64 +265,5 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
-    }
-
-    private fun stopRecording() {
-        val serviceIntent = Intent(this, RecordingService::class.java).apply {
-            action = Constants.ACTION_STOP
-        }
-        startService(serviceIntent)
-        Toast.makeText(this, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
-    }
-
-    /**
-     * 根据 UI 状态更新界面
-     *
-     * 关键改进：UI 不再预设状态，完全由 Service 通过 StateFlow 驱动
-     */
-    private fun updateUI(state: MainUiState) {
-        // 显示错误
-        if (state.showError && state.errorMessage != null) {
-            Toast.makeText(this, state.errorMessage, Toast.LENGTH_LONG).show()
-            viewModel.errorShown()
-        }
-
-        // 更新录制按钮
-        btnRecord.apply {
-            isEnabled = !state.isStopping
-            text = when {
-                state.isStopping -> getString(R.string.recording_stopping)
-                state.isRecording -> getString(R.string.stop_recording)
-                else -> getString(R.string.start_recording)
-            }
-            setBackgroundColor(
-                if (state.isRecording) getColor(R.color.recording_red)
-                else getColor(R.color.primary)
-            )
-        }
-
-        // 更新录制状态指示器
-        val indicator = findViewById<View>(R.id.indicator)
-        if (state.isRecording) {
-            indicator.setBackgroundResource(R.drawable.indicator_recording)
-            tvStatus.text = getString(R.string.recording_in_progress)
-            recordingOverlay.visibility = View.VISIBLE
-        } else if (state.isStopping) {
-            indicator.setBackgroundResource(R.drawable.indicator_idle)
-            tvStatus.text = getString(R.string.recording_stopping)
-            recordingOverlay.visibility = View.GONE
-        } else {
-            indicator.setBackgroundResource(R.drawable.indicator_idle)
-            tvStatus.text = getString(R.string.recording_status)
-            recordingOverlay.visibility = View.GONE
-            tvDuration.text = "00:00"
-        }
-    }
-
-    /** 格式化时长为 mm:ss */
-    private fun formatDuration(durationMs: Long): String {
-        val seconds = (durationMs / 1000) % 60
-        val minutes = (durationMs / 1000) / 60
-        return String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }

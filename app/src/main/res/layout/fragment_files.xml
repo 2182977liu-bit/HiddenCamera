@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <!-- 主内容 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- 顶部栏 -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@color/surface"
+            android:elevation="2dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="16dp"
+                android:text="@string/tab_files"
+                android:textColor="@color/ink"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginEnd="8dp"
+                android:orientation="horizontal">
+                <ImageButton
+                    android:id="@+id/btnSearch"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_search"
+                    android:contentDescription="@string/search"
+                    android:background="@drawable/bg_icon_btn"
+                    android:padding="8dp" />
+                <ImageButton
+                    android:id="@+id/btnViewToggle"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_layout_grid"
+                    android:contentDescription="@string/toggle_view"
+                    android:background="@drawable/bg_icon_btn"
+                    android:padding="8dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- 可滚动内容 -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="80dp">
+
+                <!-- 存储空间卡片 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="16dp"
+                    android:background="@drawable/bg_surface"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/storage_space"
+                            android:textColor="@color/ink_2"
+                            android:textSize="13sp" />
+                        <TextView
+                            android:id="@+id/tvStorageValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/ink"
+                            android:textSize="14sp"
+                            tools:text="1.8 GB / 8.0 GB" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:id="@+id/storageBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/progress_track">
+                        <View
+                            android:id="@+id/storageBarFill"
+                            android:layout_width="0dp"
+                            android:layout_height="8dp"
+                            android:background="@drawable/progress_fill" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:id="@+id/tvFileCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/ink_2"
+                            android:textSize="12sp"
+                            tools:text="24 个文件" />
+                        <View style="@style/Widget.StatDivider" />
+                        <TextView
+                            android:id="@+id/tvTotalDurationInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/ink_2"
+                            android:textSize="12sp"
+                            tools:text="3.2 小时" />
+                        <View style="@style/Widget.StatDivider" />
+                        <TextView
+                            android:id="@+id/tvRemainingInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/ink_2"
+                            android:textSize="12sp"
+                            tools:text="剩余 6.2 GB" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 筛选 & 排序 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="horizontal">
+                        <TextView
+                            android:id="@+id/chipFilterAll"
+                            style="@style/Widget.FilterChip"
+                            android:text="@string/filter_all" />
+                        <TextView
+                            android:id="@+id/chipFilterVideo"
+                            style="@style/Widget.FilterChip"
+                            android:text="@string/filter_video" />
+                        <TextView
+                            android:id="@+id/chipFilterScreenshot"
+                            style="@style/Widget.FilterChip"
+                            android:text="@string/filter_screenshot" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/btnSort"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_sort"
+                        android:drawablePadding="4dp"
+                        android:padding="6dp"
+                        android:text="@string/sort_newest"
+                        android:textColor="@color/ink_2"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- 文件列表 -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/fileList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never" />
+
+                <!-- 空状态 -->
+                <LinearLayout
+                    android:id="@+id/emptyView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="48dp"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/empty_files"
+                        android:textColor="@color/ink_2"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- 多选工具栏 -->
+    <LinearLayout
+        android:id="@+id/multiToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/surface"
+        android:elevation="8dp"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvMultiCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/ink"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btnSelectAll"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableTop="@drawable/ic_check_check"
+                android:drawableTint="@color/ink_2"
+                android:gravity="center_horizontal"
+                android:padding="8dp"
+                android:text="@string/select_all"
+                android:textColor="@color/ink_2"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/btnShare"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:drawableTop="@drawable/ic_share"
+                android:drawableTint="@color/brand"
+                android:gravity="center_horizontal"
+                android:padding="8dp"
+                android:text="@string/share"
+                android:textColor="@color/brand"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/btnMerge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:drawableTop="@drawable/ic_combine"
+                android:drawableTint="@color/ink_2"
+                android:gravity="center_horizontal"
+                android:padding="8dp"
+                android:text="@string/merge"
+                android:textColor="@color/ink_2"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/btnDelete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:drawableTop="@drawable/ic_row_trash"
+                android:drawableTint="@color/state_error"
+                android:gravity="center_horizontal"
+                android:padding="8dp"
+                android:text="@string/delete"
+                android:textColor="@color/state_error"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 文件操作底部弹窗 -->
+    <LinearLayout
+        android:id="@+id/bottomSheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_sheet"
+        android:elevation="16dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="36dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/bg_sheet_grab" />
+
+        <TextView
+            android:id="@+id/sheetFilename"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/ink"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/sheetPlay"
+            style="@style/Widget.SheetRow"
+            android:drawableStart="@drawable/ic_play"
+            android:text="@string/play" />
+
+        <TextView
+            android:id="@+id/sheetShare"
+            style="@style/Widget.SheetRow"
+            android:drawableStart="@drawable/ic_share"
+            android:text="@string/share" />
+
+        <TextView
+            android:id="@+id/sheetRename"
+            style="@style/Widget.SheetRow"
+            android:drawableStart="@drawable/ic_pen"
+            android:text="@string/rename" />
+
+        <TextView
+            android:id="@+id/sheetMove"
+            style="@style/Widget.SheetRow"
+            android:drawableStart="@drawable/ic_row_folder"
+            android:text="@string/move_to" />
+
+        <TextView
+            android:id="@+id/sheetDetails"
+            style="@style/Widget.SheetRow"
+            android:drawableStart="@drawable/ic_row_info"
+            android:text="@string/details" />
+
+        <TextView
+            android:id="@+id/sheetDelete"
+            style="@style/Widget.SheetRow"
+            android:textColor="@color/state_error"
+            android:drawableStart="@drawable/ic_row_trash"
+            android:text="@string/delete" />
+
+        <TextView
+            android:id="@+id/sheetCancel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_surface_2"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="@string/cancel"
+            android:textColor="@color/ink"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>
