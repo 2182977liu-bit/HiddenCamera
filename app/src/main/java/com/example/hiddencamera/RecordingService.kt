@@ -282,15 +282,15 @@ class RecordingService : Service(), LifecycleOwner {
                     .requireLensFacing(lensFacing)
                     .build()
 
-                val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    ExtensionMode.FACE_RETOUCH
-                } else {
-                    ExtensionMode.BEAUTY
-                }
+                // CameraX 扩展仅支持 FACE_RETOUCH（美颜），不区分 Android 版本
+                val mode = ExtensionMode.FACE_RETOUCH
 
-                isExtensionAvailable = extensionsManager?.isExtensionAvailable(
-                    cameraSelector, mode
-                ) ?: false
+                isExtensionAvailable = try {
+                    extensionsManager?.isExtensionAvailable(cameraSelector, mode) ?: false
+                } catch (e: Exception) {
+                    Log.w(TAG, "检查扩展可用性失败", e)
+                    false
+                }
 
                 if (isExtensionAvailable) {
                     Log.d(TAG, "美颜扩展可用: $mode")
@@ -313,11 +313,8 @@ class RecordingService : Service(), LifecycleOwner {
             return baseSelector
         }
 
-        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ExtensionMode.FACE_RETOUCH
-        } else {
-            ExtensionMode.BEAUTY
-        }
+        // CameraX 扩展仅支持 FACE_RETOUCH（美颜）
+        val mode = ExtensionMode.FACE_RETOUCH
 
         return try {
             extensionsManager!!.getExtensionEnabledCameraSelector(baseSelector, mode)
@@ -408,12 +405,8 @@ class RecordingService : Service(), LifecycleOwner {
             .build()
 
         val videoCaptureBuilder = VideoCapture.Builder(recorder)
-        // 设置最大录制时长
-        try {
-            videoCaptureBuilder.setMaxVideoDuration(Constants.MAX_RECORDING_DURATION_MS.toInt())
-        } catch (e: Exception) {
-            Log.w(TAG, "设置最大录制时长失败", e)
-        }
+        // 注意：CameraX VideoCapture 不支持 setMaxVideoDuration，
+        // 最大录制时长通过 Handler.postDelayed 在 startVideoCapture 中保底触发。
 
         if (targetFps > 0) {
             try {
