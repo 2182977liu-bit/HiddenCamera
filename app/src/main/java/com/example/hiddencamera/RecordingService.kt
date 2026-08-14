@@ -343,6 +343,7 @@ class RecordingService : Service(), LifecycleOwner {
                 }
             }
 
+            // 隐藏录制画面：在目录放置 .nomedia，阻止 MediaStore 索引，视频不出现在系统相册
             try {
                 val nomediaFile = File(outputDir, ".nomedia")
                 if (!nomediaFile.exists()) {
