@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Widget 基样式：所有 Widget.XXX 子样式的前缀基类 -->
+    <style name="Widget" parent="" />
+
     <!-- 录制页快捷开关 chip -->
-    <style name="Widget.SettingsChip" parent="">
+    <style name="Widget.SettingsChip" parent="Widget">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:background">@drawable/bg_chip</item>
