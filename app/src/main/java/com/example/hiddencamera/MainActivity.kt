@@ -121,6 +121,14 @@ class MainActivity : AppCompatActivity() {
         recordFragment?.connectPreview()
     }
 
+    override fun onPause() {
+        super.onPause()
+        // 息屏/退到后台时主动分离预览 surface。
+        // 若任其被系统销毁，CameraX 会因 Preview surface 分离而中断整个相机会话，
+        // 导致录制只停留在最后一帧。分离后 VideoCapture 仍由服务独立驱动。
+        recordingService?.updateSurfaceProvider(null)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         PhoneCallDetector.stop()
