@@ -2,11 +2,9 @@ package com.example.hiddencamera
 
 import android.Manifest
 import android.app.ActivityManager
-import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
@@ -19,47 +17,43 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var btnRecord: MaterialButton
-    private var isRecording = false
+    private lateinit var tvDuration: TextView
+    private lateinit var tvStatus: TextView
+    private lateinit var recordingOverlay: View
+    private lateinit var indicatorPulse: View
+
     private var recordingService: RecordingService? = null
     private var serviceBound = false
 
-    private val recordingReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                "com.example.hiddencamera.RECORDING_STARTED" -> {
-                    if (!isRecording) updateUI(true)
-                }
-                "com.example.hiddencamera.RECORDING_STOPPED" -> {
-                    if (isRecording) updateUI(false)
-                }
-                "com.example.hiddencamera.RECORDING_ERROR" -> {
-                    val errorMsg = intent.getStringExtra("error_message") ?: "未知错误"
-                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
-                    if (isRecording) updateUI(false)
-                }
-            }
-        }
-    }
+    private val viewModel: MainViewModel by viewModels()
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as RecordingService.LocalBinder
             recordingService = binder.getService()
             serviceBound = true
+            viewModel.bindService(recordingService)
             connectPreviewToService()
-            syncRecordingState()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             recordingService = null
             serviceBound = false
+            viewModel.bindService(null)
         }
     }
 
@@ -86,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             if (Environment.isExternalStorageManager()) {
                 doStartRecording()
             } else {
-                Toast.makeText(this, "需要存储权限才能保存视频", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, R.string.need_storage_permission, Toast.LENGTH_LONG).show()
             }
         } else {
             doStartRecording()
@@ -97,19 +91,26 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        setTaskDescription(
-            ActivityManager.TaskDescription(
-                "系统服务",
-                R.mipmap.ic_launcher,
-                getColor(R.color.primary)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            setTaskDescription(
+                ActivityManager.TaskDescription(
+                    getString(R.string.app_name),
+                    R.mipmap.ic_launcher,
+                    getColor(R.color.primary)
+                )
             )
-        )
+        }
 
         btnRecord = findViewById(R.id.btnRecord)
+        tvDuration = findViewById(R.id.tvDuration)
+        tvStatus = findViewById(R.id.tvStatus)
+        recordingOverlay = findViewById(R.id.recordingOverlay)
+        indicatorPulse = findViewById(R.id.indicatorPulse)
         val btnSettings = findViewById<ImageButton>(R.id.btnSettings)
 
         btnRecord.setOnClickListener {
-            if (isRecording) {
+            val state = viewModel.uiState.value
+            if (state.isRecording || state.isStopping) {
                 stopRecording()
             } else {
                 checkPermissionsAndStart()
@@ -126,15 +127,36 @@ class MainActivity : AppCompatActivity() {
             Context.BIND_AUTO_CREATE
         )
 
-        val filter = IntentFilter().apply {
-            addAction("com.example.hiddencamera.RECORDING_STARTED")
-            addAction("com.example.hiddencamera.RECORDING_STOPPED")
-            addAction("com.example.hiddencamera.RECORDING_ERROR")
+        observeUiState()
+    }
+
+    /**
+     * 监听 ViewModel 状态并更新 UI
+     *
+     * 关键改进：UI 状态完全由 Service 通过 StateFlow 驱动，
+     * 不再依赖 BroadcastReceiver，避免状态不一致。
+     */
+    private fun observeUiState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    updateUI(state)
+                }
+            }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(recordingReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(recordingReceiver, filter)
+
+        // 录制时长更新协程
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    val state = viewModel.uiState.value
+                    if (state.isRecording) {
+                        val duration = viewModel.getCurrentDuration(System.currentTimeMillis())
+                        tvDuration.text = formatDuration(duration)
+                    }
+                    delay(500)
+                }
+            }
         }
     }
 
@@ -143,27 +165,18 @@ class MainActivity : AppCompatActivity() {
         applyPreviewMode()
         if (serviceBound) {
             connectPreviewToService()
-            syncRecordingState()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        PhoneCallDetector.stop()
         if (serviceBound) {
             try { unbindService(serviceConnection) } catch (_: Exception) {}
             serviceBound = false
             recordingService = null
         }
-        try {
-            unregisterReceiver(recordingReceiver)
-        } catch (_: Exception) {}
-    }
-
-    private fun syncRecordingState() {
-        val serviceRecording = recordingService?.isRecording ?: false
-        if (isRecording != serviceRecording) {
-            updateUI(serviceRecording)
-        }
+        viewModel.unbindService()
     }
 
     private fun connectPreviewToService() {
@@ -226,7 +239,7 @@ class MainActivity : AppCompatActivity() {
             if (Environment.isExternalStorageManager()) {
                 doStartRecording()
             } else {
-                Toast.makeText(this, "请授予文件管理权限", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.please_grant_file_permission, Toast.LENGTH_SHORT).show()
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
                     data = android.net.Uri.parse("package:$packageName")
                 }
@@ -238,8 +251,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStartRecording() {
+        // 录制前检查存储空间
+        if (!RecordingService.hasEnoughStorage()) {
+            Toast.makeText(this, R.string.storage_insufficient, Toast.LENGTH_LONG).show()
+            return
+        }
+
         val serviceIntent = Intent(this, RecordingService::class.java).apply {
-            action = RecordingService.ACTION_START
+            action = Constants.ACTION_START
         }
 
         try {
@@ -248,36 +267,86 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startService(serviceIntent)
             }
-            updateUI(true)
             Toast.makeText(this, R.string.recording_started, Toast.LENGTH_SHORT).show()
+
+            // 启动来电监听
+            PhoneCallDetector.start(this) {
+                runOnUiThread {
+                    if (viewModel.uiState.value.isRecording) {
+                        Toast.makeText(
+                            this,
+                            "检测到来电，自动停止录制",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        stopRecording()
+                    }
+                }
+            }
         } catch (e: Exception) {
-            Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                getString(R.string.start_failed, e.message ?: ""),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
     private fun stopRecording() {
         val serviceIntent = Intent(this, RecordingService::class.java).apply {
-            action = RecordingService.ACTION_STOP
+            action = Constants.ACTION_STOP
         }
         startService(serviceIntent)
-        updateUI(false)
         Toast.makeText(this, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
     }
 
-    private fun updateUI(recording: Boolean) {
-        isRecording = recording
-        if (recording) {
-            btnRecord.text = getString(R.string.stop_recording)
-            btnRecord.setBackgroundColor(getColor(R.color.recording_red))
-            findViewById<View>(R.id.indicator)
-                .setBackgroundResource(R.drawable.indicator_recording)
-            findViewById<TextView>(R.id.tvStatus).text = "录制状态：录制中..."
-        } else {
-            btnRecord.text = getString(R.string.start_recording)
-            btnRecord.setBackgroundColor(getColor(R.color.primary))
-            findViewById<View>(R.id.indicator)
-                .setBackgroundResource(R.drawable.indicator_idle)
-            findViewById<TextView>(R.id.tvStatus).text = getString(R.string.recording_status)
+    /**
+     * 根据 UI 状态更新界面
+     *
+     * 关键改进：UI 不再预设状态，完全由 Service 通过 StateFlow 驱动
+     */
+    private fun updateUI(state: MainUiState) {
+        // 显示错误
+        if (state.showError && state.errorMessage != null) {
+            Toast.makeText(this, state.errorMessage, Toast.LENGTH_LONG).show()
+            viewModel.errorShown()
         }
+
+        // 更新录制按钮
+        btnRecord.apply {
+            isEnabled = !state.isStopping
+            text = when {
+                state.isStopping -> getString(R.string.recording_stopping)
+                state.isRecording -> getString(R.string.stop_recording)
+                else -> getString(R.string.start_recording)
+            }
+            setBackgroundColor(
+                if (state.isRecording) getColor(R.color.recording_red)
+                else getColor(R.color.primary)
+            )
+        }
+
+        // 更新录制状态指示器
+        val indicator = findViewById<View>(R.id.indicator)
+        if (state.isRecording) {
+            indicator.setBackgroundResource(R.drawable.indicator_recording)
+            tvStatus.text = getString(R.string.recording_in_progress)
+            recordingOverlay.visibility = View.VISIBLE
+        } else if (state.isStopping) {
+            indicator.setBackgroundResource(R.drawable.indicator_idle)
+            tvStatus.text = getString(R.string.recording_stopping)
+            recordingOverlay.visibility = View.GONE
+        } else {
+            indicator.setBackgroundResource(R.drawable.indicator_idle)
+            tvStatus.text = getString(R.string.recording_status)
+            recordingOverlay.visibility = View.GONE
+            tvDuration.text = "00:00"
+        }
+    }
+
+    /** 格式化时长为 mm:ss */
+    private fun formatDuration(durationMs: Long): String {
+        val seconds = (durationMs / 1000) % 60
+        val minutes = (durationMs / 1000) / 60
+        return String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }

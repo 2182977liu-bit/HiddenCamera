@@ -2,6 +2,7 @@ package com.example.hiddencamera
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 
 /**
@@ -14,13 +15,17 @@ class ToggleRecordingActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         val serviceIntent = Intent(this, RecordingService::class.java).apply {
-            action = RecordingService.ACTION_TOGGLE
+            action = Constants.ACTION_TOGGLE
         }
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            // 静默失败，避免打扰用户
         }
 
         finish()

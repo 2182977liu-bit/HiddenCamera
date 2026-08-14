@@ -44,17 +44,29 @@ class SettingsActivity : AppCompatActivity() {
         val tvLegLength = findViewById<TextView>(R.id.tvLegLength)
         val tvWaistSlim = findViewById<TextView>(R.id.tvWaistSlim)
 
+        // 摄像头选择
         val currentLens = Prefs.getCameraLens(this)
         if (currentLens == "front") rgCamera.check(R.id.rbFront)
         else rgCamera.check(R.id.rbBack)
 
-        val resolutions = arrayOf("1080p (1920x1080)", "720p (1280x720)", "480p (720x480)")
+        // 分辨率
+        val resolutions = arrayOf(
+            getString(R.string.resolution_1080p),
+            getString(R.string.resolution_720p),
+            getString(R.string.resolution_480p)
+        )
         val resAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, resolutions)
         resAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerResolution.adapter = resAdapter
         spinnerResolution.setSelection(Prefs.getResolution(this))
 
-        val fpsOptions = arrayOf("自动", "30 FPS", "60 FPS", "120 FPS")
+        // 帧率
+        val fpsOptions = arrayOf(
+            getString(R.string.fps_auto),
+            getString(R.string.fps_30),
+            getString(R.string.fps_60),
+            getString(R.string.fps_120)
+        )
         val fpsValues = intArrayOf(0, 30, 60, 120)
         val fpsAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, fpsOptions)
         fpsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -63,6 +75,7 @@ class SettingsActivity : AppCompatActivity() {
         val fpsIndex = fpsValues.indexOf(currentFps).let { if (it < 0) 0 else it }
         spinnerFps.setSelection(fpsIndex)
 
+        // 预览模式
         when (Prefs.getPreviewMode(this)) {
             0 -> rgPreviewMode.check(R.id.rbPreviewLive)
             1 -> rgPreviewMode.check(R.id.rbPreviewStatus)
@@ -71,56 +84,42 @@ class SettingsActivity : AppCompatActivity() {
 
         switchNotificationAction.isChecked = Prefs.isNotificationActionEnabled(this)
         switchShortcut.isChecked = Prefs.isShortcutEnabled(this)
+        switchBeauty.isChecked = Prefs.isBeautyEnabled(this)
 
-        val isBeautyOn = Prefs.isBeautyEnabled(this)
-        switchBeauty.isChecked = isBeautyOn
-
-        fun initSeekBar(seek: SeekBar, tv: TextView, getter: () -> Int, setter: (Int) -> Unit) {
-            val value = getter()
-            seek.progress = value
-            tv.text = value.toString()
-            seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
-                    tv.text = p.toString()
-                    if (fromUser) setter(p)
-                }
-                override fun onStartTrackingTouch(s: SeekBar?) {}
-                override fun onStopTrackingTouch(s: SeekBar?) {}
-            })
-        }
-
+        // 美颜 SeekBar 初始化
         initSeekBar(seekSkinSmooth, tvSkinSmooth,
-            { Prefs.getSkinSmooth(this@SettingsActivity) },
-            { Prefs.setSkinSmooth(this@SettingsActivity, it) })
+            { Prefs.getSkinSmooth(this) },
+            { Prefs.setSkinSmooth(this, it) })
 
         initSeekBar(seekSkinWhiten, tvSkinWhiten,
-            { Prefs.getSkinWhiten(this@SettingsActivity) },
-            { Prefs.setSkinWhiten(this@SettingsActivity, it) })
+            { Prefs.getSkinWhiten(this) },
+            { Prefs.setSkinWhiten(this, it) })
 
         initSeekBar(seekSkinRosy, tvSkinRosy,
-            { Prefs.getSkinRosy(this@SettingsActivity) },
-            { Prefs.setSkinRosy(this@SettingsActivity, it) })
+            { Prefs.getSkinRosy(this) },
+            { Prefs.setSkinRosy(this, it) })
 
         initSeekBar(seekFaceSlim, tvFaceSlim,
-            { Prefs.getFaceSlim(this@SettingsActivity) },
-            { Prefs.setFaceSlim(this@SettingsActivity, it) })
+            { Prefs.getFaceSlim(this) },
+            { Prefs.setFaceSlim(this, it) })
 
         initSeekBar(seekEyeEnlarge, tvEyeEnlarge,
-            { Prefs.getEyeEnlarge(this@SettingsActivity) },
-            { Prefs.setEyeEnlarge(this@SettingsActivity, it) })
+            { Prefs.getEyeEnlarge(this) },
+            { Prefs.setEyeEnlarge(this, it) })
 
         initSeekBar(seekBodySlim, tvBodySlim,
-            { Prefs.getBodySlim(this@SettingsActivity) },
-            { Prefs.setBodySlim(this@SettingsActivity, it) })
+            { Prefs.getBodySlim(this) },
+            { Prefs.setBodySlim(this, it) })
 
         initSeekBar(seekLegLength, tvLegLength,
-            { Prefs.getLegLength(this@SettingsActivity) },
-            { Prefs.setLegLength(this@SettingsActivity, it) })
+            { Prefs.getLegLength(this) },
+            { Prefs.setLegLength(this, it) })
 
         initSeekBar(seekWaistSlim, tvWaistSlim,
-            { Prefs.getWaistSlim(this@SettingsActivity) },
-            { Prefs.setWaistSlim(this@SettingsActivity, it) })
+            { Prefs.getWaistSlim(this) },
+            { Prefs.setWaistSlim(this, it) })
 
+        // 监听器
         rgCamera.setOnCheckedChangeListener { _, checkedId ->
             val lens = if (checkedId == R.id.rbFront) "front" else "back"
             Prefs.setCameraLens(this, lens)
@@ -166,18 +165,37 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun initSeekBar(
+        seek: SeekBar,
+        tv: TextView,
+        getter: () -> Int,
+        setter: (Int) -> Unit
+    ) {
+        val value = getter()
+        seek.progress = value
+        tv.text = value.toString()
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
+                tv.text = p.toString()
+                if (fromUser) setter(p)
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
+        })
+    }
+
     private fun createPinnedShortcut() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val shortcutManager = getSystemService(android.content.pm.ShortcutManager::class.java)
             if (shortcutManager.isRequestPinShortcutSupported) {
                 val shortcutIntent = Intent(this, ToggleRecordingActivity::class.java).apply {
-                    action = "com.example.hiddencamera.ACTION_TOGGLE_RECORDING"
+                    action = Constants.ACTION_QUICK_TOGGLE
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
                 val shortcut = android.content.pm.ShortcutInfo.Builder(this, "quick_record")
-                    .setShortLabel("快速录制")
-                    .setLongLabel("点击开始/停止录制")
+                    .setShortLabel(getString(R.string.quick_record_started))
+                    .setLongLabel(getString(R.string.shortcut_enabled_desc))
                     .setIcon(
                         android.graphics.drawable.Icon.createWithResource(
                             this, android.R.drawable.ic_menu_preferences
@@ -189,10 +207,10 @@ class SettingsActivity : AppCompatActivity() {
                 shortcutManager.requestPinShortcut(shortcut, null)
                 Toast.makeText(this, R.string.shortcut_created, Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this, "当前启动器不支持创建快捷方式", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.shortcut_not_supported, Toast.LENGTH_SHORT).show()
             }
         } else {
-            Toast.makeText(this, "需要 Android 8.0 及以上版本", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.android_version_too_low, Toast.LENGTH_SHORT).show()
         }
     }
 

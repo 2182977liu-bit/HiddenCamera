@@ -7,4 +7,13 @@
     <color name="accent">#FF448AFF</color>
     <color name="recording_red">#FFF44336</color>
     <color name="bg_light">#FFF5F5F5</color>
+
+    <!-- 语义化颜色（替代硬编码） -->
+    <color name="text_primary">#FF333333</color>
+    <color name="text_secondary">#FF666666</color>
+    <color name="text_hint">#FF999999</color>
+    <color name="overlay_dark">#80000000</color>
+    <color name="divider">#FFEEEEEE</color>
+    <color name="beauty_accent">#FFFF6B9C</color>
+    <color name="warning">#FFFF9800</color>
 </resources>
