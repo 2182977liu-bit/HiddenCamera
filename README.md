@@ -27,15 +27,35 @@
 - **质量降级** — 设备不支持请求的分辨率时自动降级（FallbackStrategy）
 
 ### 🖥️ 界面功能
-- **实时预览** — 主界面显示相机实时画面（通过 Binder 连接 Service 与 Activity 的 PreviewView）
-- **录制状态** — 主界面显示录制状态指示器（灰色空闲 / 红色录制中）
-- **空白模式** — 主界面不显示任何内容
-- **三种模式可在设置中自由切换**
+- **三 Tab 底部导航** — 录制 / 文件 / 设置 三个页面，底部导航栏切换
+- **实时预览** — 录制页 16:9 相机实时画面预览
+- **录制状态徽标** — 录制中左上角显示红色录制状态徽标
+- **快捷开关** — 录制页顶部快捷开关（美颜、闪光灯、悬浮窗、内录音频、计时器、防误触）
+- **录制统计信息** — 录制页底部显示分辨率、帧率、码率统计
+- **三种预览模式** — 实时预览 / 录制状态 / 空白，可在设置中切换
 
-### 📁 存储功能
+### 📁 文件管理
+- **视频列表** — 按日期分组展示所有录制视频，显示缩略图、时长、大小、分辨率
+- **筛选排序** — 支持按全部/今天/本周/本月筛选，按时间/大小排序
+- **多选操作** — 长按进入多选模式，支持批量分享、删除
+- **视频弹窗** — 点击视频弹出操作菜单（播放、分享、删除、查看详情、复制路径）
+
+### 💾 存储功能
 - **公共目录** — 视频保存在 `Download/xcodx/` 目录，文件管理器可直接访问
 - **相册隐藏** — 自动创建 `.nomedia` 文件，防止系统相册扫描
 - **毫秒级命名** — 文件名精确到毫秒，避免快速连续录制时冲突
+
+### ⚙️ 设置功能
+- **美颜美体** — 磨皮、美白、红润、瘦脸、大眼、瘦身、长腿、瘦腰
+- **摄像头设置** — 默认摄像头选择（前置/后置）
+- **录制质量** — 分辨率、帧率、视频质量、关键帧间隔
+- **音频设置** — 音频来源、降噪开关
+- **预览模式** — 实时预览 / 录制状态 / 空白
+- **通知栏快捷按钮** — 通知栏显示停止录制按钮
+- **桌面快捷方式** — 创建快速录制桌面图标
+- **存储管理** — 存储路径、剩余空间显示
+- **悬浮窗权限** — 悬浮窗权限申请
+- **来电处理** — 来电时自动停止录制
 
 ---
 
@@ -83,31 +103,39 @@
 | Kotlin | 1.9 | 开发语言 |
 | CameraX | 1.3.1 | 相机 API（VideoCapture + Recorder + Preview） |
 | Camera2Interop | — | 底层帧率设置（CONTROL_AE_TARGET_FPS_RANGE） |
-| Material Components | — | UI 组件 |
-| AndroidX Lifecycle | 2.7.0 | Service 生命周期管理 |
+| Material Components | — | UI 组件（BottomNavigationView、Slider 等） |
+| AndroidX Fragment | — | 三 Tab 页面导航 |
+| AndroidX Lifecycle | 2.7.0 | Service / ViewModel 生命周期管理 |
+| ViewModel + StateFlow | — | UI 状态管理 |
 | Gradle | 8.2 | 构建工具 |
 
 ### 架构设计
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   MainActivity                  │
-│  ┌───────────┐  ┌──────────┐  ┌──────────────┐  │
-│  │ PreviewView│  │ 录制按钮  │  │ 设置按钮(右上) │  │
-│  └─────┬─────┘  └────┬─────┘  └──────┬───────┘  │
-│        │              │               │          │
-│   bindService    startForeground    SettingsActivity│
-│        │              │                          │
-│        ▼              ▼                          │
-│  ┌─────────────────────────────────────────────┐ │
-│  │            RecordingService                   │ │
-│  │  ┌──────────┐  ┌──────────┐  ┌───────────┐  │ │
-│  │  │ Preview  │  │VideoCapture│  │ Recorder  │  │ │
-│  │  └──────────┘  └──────────┘  └───────────┘  │ │
-│  │         ProcessCameraProvider                 │ │
-│  │         LifecycleOwner (手动管理)              │ │
-│  └─────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                     MainActivity                        │
+│  ┌──────────────┐  ┌──────────┐  ┌──────────────────┐   │
+│  │ RecordFragment │  │FilesFragment│ │SettingsFragment  │   │
+│  │  (录制页)       │  │ (文件页)   │  │ (设置页)         │   │
+│  └───────┬───────┘  └──────────┘  └──────────────────┘   │
+│          │     BottomNavigation (三 Tab)                  │
+│    bindService                                            │
+│          ▼                                                │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │                 RecordingService                      │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │  │
+│  │  │ Preview  │  │VideoCapture│  │     Recorder      │  │  │
+│  │  └──────────┘  └──────────┘  └───────────────────┘  │  │
+│  │            ProcessCameraProvider                      │  │
+│  │            LifecycleOwner (手动管理)                   │  │
+│  └─────────────────────────────────────────────────────┘  │
+│                                                            │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │              MainViewModel                          │  │
+│  │  UI State (isRecording / isStopping / duration 等)  │  │
+│  │              StateFlow → Fragment 订阅                │  │
+│  └─────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 **核心设计要点：**
@@ -116,27 +144,44 @@
 - **Binder 通信** — Activity 通过 `bindService` 获取 Service 实例，将 `PreviewView.surfaceProvider` 传递给 Service 的 Preview use case
 - **异步录制停止** — `activeRecording.stop()` 是异步操作，通过 `VideoRecordEvent.Finalize` 回调确认文件写入完成后才清理相机资源，避免视频损坏
 - **3 秒超时保底** — 如果 Finalize 事件未触发，3 秒后强制清理，防止 Service 无法停止
+- **ViewModel + StateFlow** — 统一的 UI 状态管理，Fragment 通过 `repeatOnLifecycle` 安全订阅
 
 ### 项目结构
 
 ```
 app/src/main/java/com/example/hiddencamera/
-├── MainActivity.kt          # 主界面（预览、录制控制、Service 绑定、权限管理）
+├── MainActivity.kt          # 主界面（三 Tab 容器、Service 绑定、权限管理）
+├── MainViewModel.kt         # UI 状态管理（StateFlow）
 ├── RecordingService.kt      # 后台录制服务（ForegroundService + LifecycleOwner）
-├── SettingsActivity.kt      # 设置页面（摄像头、分辨率、帧率、显示模式）
+├── RecordFragment.kt        # 录制页（相机预览、录制控制、快捷开关、统计）
+├── FilesFragment.kt         # 文件页（MediaStore 扫描、日期分组、多选）
+├── FileListAdapter.kt       # 文件列表适配器（含日期头部）
+├── VideoFile.kt             # 视频文件数据模型
+├── SettingsFragment.kt      # 设置页（12 个设置 section）
 ├── Prefs.kt                 # SharedPreferences 配置管理
-└── res/
-    ├── layout/
-    │   ├── activity_main.xml       # 主界面布局（PreviewView + 覆盖层）
-    │   └── activity_settings.xml   # 设置页面布局
-    ├── values/
-    │   ├── strings.xml             # 字符串资源
-    │   └── colors.xml              # 颜色资源
-    ├── drawable/
-    │   ├── indicator_idle.xml      # 空闲状态指示器
-    │   └── indicator_recording.xml # 录制状态指示器
-    └── xml/
-        └── file_paths.xml          # FileProvider 路径配置
+├── RecordingState.kt        # 录制状态数据类
+└── Constants.kt             # 常量定义
+
+res/
+├── layout/
+│   ├── activity_main.xml           # 主布局（FragmentContainerView + BottomNavigationView）
+│   ├── fragment_record.xml         # 录制页布局
+│   ├── fragment_files.xml          # 文件页布局
+│   ├── fragment_settings.xml       # 设置页布局
+│   ├── item_file.xml               # 文件列表项
+│   └── item_date_header.xml        # 日期分组头部
+├── menu/
+│   └── bottom_nav.xml              # 底部导航菜单
+├── color/
+│   └── bottom_nav_color.xml        # 导航栏颜色状态列表
+├── values/
+│   ├── strings.xml                 # 字符串资源
+│   ├── colors.xml                  # 颜色资源（深色 teal 主题）
+│   ├── themes.xml                  # 主题（深色背景 + teal 品牌色）
+│   └── styles.xml                  # 组件样式
+├── drawable/                       # 图标、背景、选择器
+└── xml/
+    └── file_paths.xml              # FileProvider 路径配置
 ```
 
 ---
@@ -156,25 +201,28 @@ app/src/main/java/com/example/hiddencamera/
 | 通知 | 前台服务通知 | Android 13+ 弹窗授权 |
 | 文件管理 | 写入 Download 目录 | Android 11+ 跳转系统设置页授权 |
 
-### 3. 配置设置
+### 3. 主界面导航
 
-点击右上角 ⚙️ 设置按钮，可配置：
+底部导航栏三个 Tab：
 
-- **摄像头** — 前置 / 后置
-- **分辨率** — 1080p / 720p / 480p
-- **帧率** — 自动 / 30 FPS / 60 FPS / 120 FPS
-- **显示模式** — 实时预览 / 录制状态 / 空白
+- **录制** — 相机预览、录制控制、快捷开关、录制统计
+- **文件** — 查看已录制视频列表，支持筛选、排序、多选操作
+- **设置** — 美颜、摄像头、录制质量、音频、预览模式等详细设置
 
 ### 4. 开始录制
 
-1. 点击 **"开始录制"** 按钮
-2. 通知栏显示"后台服务运行中"
-3. App 可退到后台或息屏，录制继续运行
-4. 点击 **"停止录制"** 按钮，视频自动保存
+1. 进入 **录制** Tab
+2. 点击红色 **录制按钮** 开始录制
+3. 通知栏显示"系统服务运行中"
+4. App 可退到后台或息屏，录制继续运行
+5. 再次点击 **录制按钮** 停止录制，视频自动保存
 
 ### 5. 查看视频
 
-视频保存在 `Download/xcodx/` 目录，使用文件管理器打开即可。
+- 进入 **文件** Tab 即可查看所有已录制的视频
+- 支持按全部/今天/本周/本月筛选，按时长/大小排序
+- 长按可多选，批量分享或删除
+- 视频保存在 `Download/xcodx/` 目录，文件管理器也可直接访问
 
 ---
 
@@ -182,9 +230,9 @@ app/src/main/java/com/example/hiddencamera/
 
 | 模式 | 说明 | 适用场景 |
 |------|------|----------|
-| 📷 实时预览 | 主界面显示相机实时画面 | 调试、确认取景范围 |
-| 🟢 录制状态 | 主界面显示录制状态指示器 | 低调使用、省电 |
-| ⬜ 空白 | 主界面不显示任何内容 | 最大程度隐蔽 |
+| 🎥 实时预览 | 录制页显示相机实时画面 | 正常使用、确认取景范围 |
+| 🟢 录制状态 | 录制页只显示状态指示器 | 节省系统资源 |
+| ⬜ 空白 | 录制页不显示任何内容 | 最大程度隐蔽 |
 
 ---
 
@@ -244,6 +292,21 @@ APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
 ---
 
 ## 📝 更新日志
+
+### v2.0 — 2025-08-14
+
+**🎨 UI 全面重设计**
+- **深色 Teal 主题** — 全新深色 teal 品牌色，统一视觉风格
+- **三 Tab 底部导航** — 录制/文件/设置三页面，底部导航栏切换
+- **录制页重做** — 16:9 相机预览、录制状态徽标、主录制按钮、暂停/截图、快捷开关（美颜/闪光灯/悬浮窗/内录音频/计时器/防误触）、录制统计信息
+- **文件页（全新）** — MediaStore 扫描视频列表、日期分组、筛选（全部/今天/本周/本月）、排序（时间/大小）、长按多选、批量分享/删除、视频详情弹窗
+- **设置页重做** — 12 个设置 section：美颜美体、摄像头、录制质量、音频、预览模式、通知栏、快捷方式、存储、悬浮窗、来电处理、权限、关于
+
+**🏗️ 架构重构**
+- 单 Activity + 多 Fragment 架构，BottomNavigationView 导航
+- ViewModel + StateFlow 统一 UI 状态管理
+- Fragment 通过 `repeatOnLifecycle` 安全订阅状态
+- 移除旧的 SettingsActivity
 
 ### v1.6 — 2025-04-24
 
