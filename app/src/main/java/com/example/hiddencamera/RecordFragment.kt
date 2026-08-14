@@ -96,7 +96,7 @@ class RecordFragment : Fragment() {
             binding.btnBeauty.setBackgroundResource(
                 if (enabled) R.drawable.bg_chip_active else R.drawable.bg_chip
             )
-            binding.btnBeauty.setTextColor(
+            binding.btnBeautyText.setTextColor(
                 if (enabled) ContextCompat.getColor(ctx, R.color.brand_ink)
                 else ContextCompat.getColor(ctx, R.color.ink_2)
             )
