@@ -47,4 +47,24 @@
     <color name="state_success">#FF2EA043</color>
     <color name="state_warning">#FFD29922</color>
     <color name="state_info">#FF388BFD</color>
+
+    <!-- 状态背景（半透明） -->
+    <color name="success_bg">#262EA043</color>
+    <color name="warning_bg">#26D29922</color>
+
+    <!-- 遮罩 -->
+    <color name="overlay_light">#99000000</color>
+    <color name="overlay_gradient_bottom">#CC0B0F14</color>
+    <color name="black_overlay_40">#66000000</color>
+
+    <!-- 品牌色阶（供部分 drawable/tint 使用） -->
+    <color name="brand_50">#F0FDFA</color>
+    <color name="brand_100">#CCFBF1</color>
+    <color name="brand_200">#99F6E4</color>
+    <color name="brand_300">#5EEAD4</color>
+    <color name="brand_400">#2DD4BF</color>
+    <color name="brand_600">#0D9488</color>
+    <color name="brand_700">#0F766E</color>
+    <color name="brand_800">#115E59</color>
+    <color name="brand_900">#134E4A</color>
 </resources>

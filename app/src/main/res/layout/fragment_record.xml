@@ -1,29 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@color/bg">
 
-    <!-- ========== 1. 相机预览区（16:9） ========== -->
-    <FrameLayout
-        android:id="@+id/previewContainer"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@android:color/black"
-        app:layout_constraintDimensionRatio="h,16:9"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+    <!-- ============ Header ============ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/surface"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/tab_record"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/ink" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <View
+                android:id="@+id/recDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/indicator_idle"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/idle"
+                android:textSize="12sp"
+                android:textColor="@color/ink_2" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View style="@style/Widget.Recorder.Divider" />
+
+    <!-- ============ Camera Preview ============ -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="5"
+        android:background="#000000">
+
+        <!-- 相机预览 -->
         <androidx.camera.view.PreviewView
             android:id="@+id/previewView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- 状态显示覆盖层（模式1） -->
+        <!-- 状态覆盖层 -->
         <LinearLayout
             android:id="@+id/statusOverlay"
             android:layout_width="match_parent"
@@ -31,358 +71,435 @@
             android:orientation="vertical"
             android:gravity="center"
             android:background="@color/bg"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:visibility="gone">
+
             <TextView
-                android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/idle"
-                android:textColor="@color/ink_2"
-                android:textSize="16sp" />
+                android:text="@string/recording"
+                android:textSize="16sp"
+                android:textColor="@color/ink" />
         </LinearLayout>
 
-        <!-- 空白覆盖层（模式2） -->
-        <View
+        <!-- 空白伪装层 -->
+        <LinearLayout
             android:id="@+id/blankOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
             android:background="@color/bg"
-            android:visibility="gone" />
+            android:visibility="gone">
 
-        <!-- 左上：录制状态徽标 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textSize="14sp"
+                android:textColor="@color/ink_2" />
+        </LinearLayout>
+
+        <!-- 录制徽标 -->
         <LinearLayout
             android:id="@+id/recBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="12dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
+            android:background="@drawable/bg_preview_overlay_chip"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="12dp"
-            android:background="#99000000"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:visibility="gone">
+
             <View
-                android:id="@+id/recDot"
                 android:layout_width="8dp"
                 android:layout_height="8dp"
-                android:background="@drawable/bg_rec_dot" />
+                android:background="@drawable/bg_record_button"
+                android:layout_marginEnd="6dp" />
+
             <TextView
                 android:id="@+id/recBadgeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/recording"
-                android:textColor="@color/white"
+                android:text="@string/idle"
                 android:textSize="12sp"
-                android:layout_marginStart="6dp" />
+                android:textColor="@color/ink" />
         </LinearLayout>
 
         <!-- 右上：切换摄像头 -->
         <ImageButton
             android:id="@+id/btnSwitchCamera"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:layout_gravity="top|end"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="12dp"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_preview_overlay_button"
             android:src="@drawable/ic_switch_camera"
+            android:scaleType="center"
             android:contentDescription="@string/switch_camera"
-            android:background="#99000000"
-            android:padding="9dp" />
+            app:tint="@android:color/white" />
 
         <!-- 左下：美颜入口 -->
-        <TextView
+        <LinearLayout
             android:id="@+id/btnBeauty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|start"
             android:layout_marginStart="12dp"
             android:layout_marginBottom="12dp"
-            android:drawableStart="@drawable/ic_sparkles"
-            android:drawablePadding="6dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_chip"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
-            android:text="@string/beauty"
-            android:textColor="@color/brand"
-            android:textSize="12sp"
-            android:background="@drawable/bg_chip_active" />
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_sparkles"
+                app:tint="@color/ink_2"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/beauty"
+                android:textSize="12sp"
+                android:textColor="@color/ink_2" />
+        </LinearLayout>
 
         <!-- 右下：闪光灯 -->
         <ImageButton
             android:id="@+id/btnFlash"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:layout_gravity="bottom|end"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="12dp"
-            android:src="@drawable/ic_flash_off"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_preview_overlay_button"
+            android:src="@drawable/ic_zap"
+            android:scaleType="center"
             android:contentDescription="@string/flash"
-            android:background="#99000000"
-            android:padding="9dp" />
-
-        <!-- 中下：实时参数 -->
-        <TextView
-            android:id="@+id/tvParams"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="12dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp"
-            android:background="#66000000"
-            android:text="1080p · 30fps"
-            android:fontFamily="monospace"
-            android:textColor="#B3FFFFFF"
-            android:textSize="11sp" />
+            app:tint="@android:color/white" />
     </FrameLayout>
 
-    <!-- ========== 2. 录制信息栏 ========== -->
+    <!-- ============ 录制信息栏 ============ -->
     <LinearLayout
-        android:id="@+id/infoBar"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@color/surface"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        app:layout_constraintTop_toBottomOf="@id/previewContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:paddingBottom="12dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:baselineAligned="false">
+            android:gravity="center_vertical">
+
             <TextView
                 android:id="@+id/tvDuration"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="00:00"
+                android:textSize="26sp"
+                android:textStyle="bold"
                 android:fontFamily="monospace"
-                android:textColor="@color/ink"
-                android:textSize="24sp" />
+                android:textColor="@color/ink" />
+
             <TextView
                 android:id="@+id/tvFileSize"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 MB"
+                android:textSize="14sp"
                 android:fontFamily="monospace"
-                android:textColor="@color/ink_2"
-                android:textSize="14sp" />
+                android:textColor="@color/ink_2" />
         </LinearLayout>
+
         <TextView
-            android:id="@+id/tvRemaining"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="@color/ink_3"
+            android:layout_marginTop="4dp"
+            android:text="@string/remaining_space"
             android:textSize="12sp"
-            tools:text="剩余空间 6.2 GB" />
+            android:textColor="@color/ink_3" />
     </LinearLayout>
 
-    <!-- ========== 3. 录制控件 ========== -->
+    <View style="@style/Widget.Recorder.Divider" />
+
+    <!-- ============ 录制控制 ============ -->
     <LinearLayout
-        android:id="@+id/controlsRow"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="24dp"
-        android:paddingBottom="8dp"
-        app:layout_constraintTop_toBottomOf="@id/infoBar"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingTop="20dp"
+        android:paddingBottom="16dp">
 
-        <!-- 暂停/继续 -->
-        <ImageButton
-            android:id="@+id/btnPause"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_marginEnd="40dp"
-            android:src="@drawable/ic_pause"
-            android:contentDescription="@string/pause_resume"
-            android:background="@drawable/bg_surface_3"
-            android:padding="14dp" />
-
-        <!-- 主录制按钮 + 脉冲环 -->
         <FrameLayout
-            android:id="@+id/recordBtnWrap"
-            android:layout_width="72dp"
-            android:layout_height="72dp">
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
             <View
                 android:id="@+id/recordPulseRing"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
                 android:background="@drawable/bg_record_button"
                 android:visibility="gone" />
+
             <ImageButton
                 android:id="@+id/btnRecord"
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:src="@drawable/ic_record_square"
-                android:contentDescription="@string/tap_to_start"
+                android:layout_gravity="center"
                 android:background="@drawable/bg_record_button"
-                android:padding="18dp" />
+                android:src="@drawable/ic_square"
+                android:scaleType="center"
+                android:contentDescription="@string/tap_to_start"
+                app:tint="@android:color/white" />
         </FrameLayout>
 
-        <!-- 截图 -->
-        <ImageButton
-            android:id="@+id/btnScreenshot"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_marginStart="40dp"
-            android:src="@drawable/ic_row_camera"
-            android:contentDescription="@string/screenshot"
-            android:background="@drawable/bg_surface_3"
-            android:padding="14dp" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/tvTapHint"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/tap_to_start"
-        android:textColor="@color/ink_2"
-        android:textSize="13sp"
-        app:layout_constraintTop_toBottomOf="@id/controlsRow"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- ========== 4. 快捷开关 ========== -->
-    <LinearLayout
-        android:id="@+id/togglesRow"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="20dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTapHint"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:id="@+id/toggleFloat"
-            style="@style/Widget.SettingsChip"
-            android:text="@string/floating_window" />
-        <TextView
-            android:id="@+id/toggleAudio"
-            style="@style/Widget.SettingsChip"
-            android:text="@string/internal_audio" />
-        <TextView
-            android:id="@+id/toggleBeauty"
-            style="@style/Widget.SettingsChip"
-            android:text="@string/beauty" />
-        <TextView
-            android:id="@+id/toggleTimer"
-            style="@style/Widget.SettingsChip"
-            android:text="@string/timer" />
-        <TextView
-            android:id="@+id/toggleTouch"
-            style="@style/Widget.SettingsChip"
-            android:text="@string/anti_touch" />
-    </LinearLayout>
-
-    <!-- ========== 5. 录制统计 ========== -->
-    <LinearLayout
-        android:id="@+id/statsCard"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="@drawable/bg_surface"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="20dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
-        app:layout_constraintTop_toBottomOf="@id/togglesRow"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <TextView
-                android:id="@+id/tvRecordCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textColor="@color/ink"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/record_count"
-                android:textColor="@color/ink_2"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:gravity="center"
-            android:background="@color/line">
-            <TextView
-                android:id="@+id/tvTotalDuration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0h"
-                android:textColor="@color/ink"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/total_duration"
-                android:textColor="@color/ink_2"
-                android:textSize="11sp" />
+            android:layout_marginTop="8dp">
+
+            <ImageButton
+                android:id="@+id/btnPause"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:src="@drawable/ic_pause"
+                android:background="@drawable/bg_control_button"
+                android:scaleType="center"
+                android:contentDescription="@string/pause_resume"
+                app:tint="@color/ink_2" />
+
+            <ImageButton
+                android:id="@+id/btnScreenshot"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="24dp"
+                android:src="@drawable/ic_camera"
+                android:background="@drawable/bg_control_button"
+                android:scaleType="center"
+                android:contentDescription="@string/screenshot"
+                app:tint="@color/ink_2" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvTapHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/tap_to_start"
+            android:textSize="13sp"
+            android:textColor="@color/ink_2" />
+    </LinearLayout>
+
+    <!-- ============ 快捷开关 ============ -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/toggleFloat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip_active"
+                android:text="@string/floating_window"
+                android:textSize="12sp"
+                android:textColor="@color/brand_ink"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/toggleAudio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip_active"
+                android:text="@string/internal_audio"
+                android:textSize="12sp"
+                android:textColor="@color/brand_ink"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/toggleBeauty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip"
+                android:text="@string/beauty"
+                android:textSize="12sp"
+                android:textColor="@color/ink_2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/toggleTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip"
+                android:text="@string/timer"
+                android:textSize="12sp"
+                android:textColor="@color/ink_2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/toggleTouch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip"
+                android:text="@string/anti_touch"
+                android:textSize="12sp"
+                android:textColor="@color/ink_2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- ============ 统计卡片 ============ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_card"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="12dp">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center_horizontal">
+
             <TextView
-                android:id="@+id/tvStorageUsed"
+                android:id="@+id/tvStatCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0 MB"
-                android:textColor="@color/ink"
+                android:text="0 次"
                 android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:textColor="@color/ink" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
+                android:text="@string/record_count"
+                android:textSize="11sp"
+                android:textColor="@color/ink_2" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/line"
+            android:layout_gravity="center_vertical" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/tvStatDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 小时"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/ink" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/total_duration"
+                android:textSize="11sp"
+                android:textColor="@color/ink_2" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/line"
+            android:layout_gravity="center_vertical" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/tvStatStorage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 GB"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/ink" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:text="@string/storage_used"
-                android:textColor="@color/ink_2"
-                android:textSize="11sp" />
+                android:textSize="11sp"
+                android:textColor="@color/ink_2" />
         </LinearLayout>
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>
