@@ -29,6 +29,7 @@ jobs:
     - name: Build Debug APK
       run: |
         ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log
+        exit ${PIPESTATUS[0]}
 
     - name: Upload APK
       if: success()
