@@ -26,17 +26,18 @@ jobs:
         export PATH=$PWD/gradle-8.2/bin:$PATH
         gradle wrapper --gradle-version 8.2
 
-    - name: Build Debug APK
+    # Release 包：开启混淆与资源裁剪，体积更小；使用 debug 签名可直接安装
+    - name: Build Release APK
       run: |
-        ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log
+        ./gradlew assembleRelease --no-daemon 2>&1 | tee build.log
         exit ${PIPESTATUS[0]}
 
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/*.apk
+        name: app-release
+        path: app/build/outputs/apk/release/*.apk
 
     - name: Upload Build Log
       if: always()

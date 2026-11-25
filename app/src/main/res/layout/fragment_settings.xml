@@ -149,23 +149,6 @@
                 </LinearLayout>
 
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_flip" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/mirror_flip" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchMirror"
-                        style="@style/Widget.RowSwitch" />
-                </LinearLayout>
-
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_sun" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/exposure_comp" />
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/seekExposure"
-                        style="@style/Widget.RowSlider" />
-                    <TextView android:id="@+id/tvExposure" style="@style/Widget.SliderValue" />
-                </LinearLayout>
-
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_focus" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/focus_mode" />
                     <TextView style="@style/Widget.RowValue" android:text="@string/auto" />
@@ -176,13 +159,14 @@
             <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_quality" />
             <LinearLayout style="@style/Widget.SettingsCard">
 
+                <!-- 与 RecordingService 映射一致：0=1080p 1=720p 2=480p（旧版标签与实现错位） -->
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_monitor" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/resolution" />
                     <LinearLayout style="@style/Widget.ChipGroup" android:orientation="horizontal">
-                        <TextView android:id="@+id/chipRes0" style="@style/Widget.SettingsChip.Small" android:text="720p" />
-                        <TextView android:id="@+id/chipRes1" style="@style/Widget.SettingsChip.Small" android:text="1080p" />
-                        <TextView android:id="@+id/chipRes2" style="@style/Widget.SettingsChip.Small" android:text="4K" />
+                        <TextView android:id="@+id/chipRes0" style="@style/Widget.SettingsChip.Small" android:text="1080p" />
+                        <TextView android:id="@+id/chipRes1" style="@style/Widget.SettingsChip.Small" android:text="720p" />
+                        <TextView android:id="@+id/chipRes2" style="@style/Widget.SettingsChip.Small" android:text="480p" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -190,16 +174,16 @@
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_film" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/frame_rate" />
                     <LinearLayout style="@style/Widget.ChipGroup" android:orientation="horizontal">
-                        <TextView android:id="@+id/chipFps0" style="@style/Widget.SettingsChip.Small" android:text="24fps" />
-                        <TextView android:id="@+id/chipFps1" style="@style/Widget.SettingsChip.Small" android:text="30fps" />
-                        <TextView android:id="@+id/chipFps2" style="@style/Widget.SettingsChip.Small" android:text="60fps" />
+                        <TextView android:id="@+id/chipFps0" style="@style/Widget.SettingsChip.Small" android:text="@string/fps_auto" />
+                        <TextView android:id="@+id/chipFps1" style="@style/Widget.SettingsChip.Small" android:text="@string/fps_30" />
+                        <TextView android:id="@+id/chipFps2" style="@style/Widget.SettingsChip.Small" android:text="@string/fps_60" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_volume" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/bitrate" />
-                    <TextView style="@style/Widget.RowValue" android:text="8 Mbps" />
+                    <TextView style="@style/Widget.RowValue" android:text="@string/auto" />
                 </LinearLayout>
 
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
@@ -213,43 +197,15 @@
                     <TextView style="@style/Widget.RowLabel" android:text="@string/max_record_duration" />
                     <TextView style="@style/Widget.RowValue" android:text="@string/max_record_duration_value" />
                 </LinearLayout>
-
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_timer" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/segment_record" />
-                    <TextView android:id="@+id/tvSegmentDuration" style="@style/Widget.RowValue" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchSegment"
-                        style="@style/Widget.RowSwitch" />
-                </LinearLayout>
             </LinearLayout>
 
             <!-- ===== 音频设置 ===== -->
             <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_audio" />
             <LinearLayout style="@style/Widget.SettingsCard">
-
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_mic" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/audio_source" />
                     <TextView style="@style/Widget.RowValue" android:text="@string/microphone" />
-                </LinearLayout>
-
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_volume" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/noise_reduction" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchNoiseReduce"
-                        style="@style/Widget.RowSwitch"
-                        android:checked="true" />
-                </LinearLayout>
-
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_volume" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/record_volume" />
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/seekVolume"
-                        style="@style/Widget.RowSlider" />
-                    <TextView android:id="@+id/tvVolume" style="@style/Widget.SliderValue" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -337,26 +293,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ===== 悬浮窗 ===== -->
-            <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_floating" />
-            <LinearLayout style="@style/Widget.SettingsCard">
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_square" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/enable_floating" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchFloating"
-                        style="@style/Widget.RowSwitch" />
-                </LinearLayout>
-                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
-                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_sun" />
-                    <TextView style="@style/Widget.RowLabel" android:text="@string/floating_opacity" />
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/seekFloatOpacity"
-                        style="@style/Widget.RowSlider" />
-                    <TextView android:id="@+id/tvFloatOpacity" style="@style/Widget.SliderValue" />
-                </LinearLayout>
-            </LinearLayout>
-
             <!-- ===== 来电处理 ===== -->
             <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_call" />
             <LinearLayout style="@style/Widget.SettingsCard">
@@ -376,6 +312,11 @@
             <TextView style="@style/Widget.SectionLabel" android:text="@string/settings_permission" />
             <LinearLayout style="@style/Widget.SettingsCard">
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
+                    <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_camera" />
+                    <TextView style="@style/Widget.RowLabel" android:text="@string/permission_camera" />
+                    <TextView android:id="@+id/tvPermCamera" style="@style/Widget.StatusBadge" />
+                </LinearLayout>
+                <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_mic" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/permission_mic" />
                     <TextView android:id="@+id/tvPermMic" style="@style/Widget.StatusBadge" />
@@ -393,7 +334,7 @@
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_info" />
                     <TextView style="@style/Widget.RowLabel" android:text="@string/version" />
-                    <TextView style="@style/Widget.RowValueMono" android:text="v1.2" />
+                    <TextView android:id="@+id/tvVersion" style="@style/Widget.RowValueMono" />
                 </LinearLayout>
                 <LinearLayout style="@style/Widget.Row" android:gravity="center_vertical">
                     <ImageView style="@style/Widget.RowIcon" android:src="@drawable/ic_row_info" />
