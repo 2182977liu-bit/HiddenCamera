@@ -27,29 +27,16 @@
                 android:textColor="@color/ink"
                 android:textSize="18sp"
                 android:textStyle="bold" />
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageButton
+                android:id="@+id/btnSearch"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:layout_gravity="center_vertical|end"
-                android:layout_marginEnd="8dp"
-                android:orientation="horizontal">
-                <ImageButton
-                    android:id="@+id/btnSearch"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:src="@drawable/ic_search"
-                    android:contentDescription="@string/search"
-                    android:background="@drawable/bg_icon_btn"
-                    android:padding="8dp" />
-                <ImageButton
-                    android:id="@+id/btnViewToggle"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:src="@drawable/ic_layout_grid"
-                    android:contentDescription="@string/toggle_view"
-                    android:background="@drawable/bg_icon_btn"
-                    android:padding="8dp" />
-            </LinearLayout>
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_search"
+                android:contentDescription="@string/search"
+                android:background="@drawable/bg_icon_btn"
+                android:padding="8dp" />
         </FrameLayout>
 
         <!-- 可滚动内容 -->
@@ -267,19 +254,6 @@
                 android:textSize="10sp" />
 
             <TextView
-                android:id="@+id/btnMerge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:drawableTop="@drawable/ic_combine"
-                android:drawableTint="@color/ink_2"
-                android:gravity="center_horizontal"
-                android:padding="8dp"
-                android:text="@string/merge"
-                android:textColor="@color/ink_2"
-                android:textSize="10sp" />
-
-            <TextView
                 android:id="@+id/btnDelete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -293,6 +267,16 @@
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
+
+    <!-- 弹窗遮罩：点击空白处关闭 -->
+    <View
+        android:id="@+id/sheetScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black_overlay_60"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
 
     <!-- 文件操作底部弹窗 -->
     <LinearLayout
@@ -340,12 +324,6 @@
             style="@style/Widget.SheetRow"
             android:drawableStart="@drawable/ic_pen"
             android:text="@string/rename" />
-
-        <TextView
-            android:id="@+id/sheetMove"
-            style="@style/Widget.SheetRow"
-            android:drawableStart="@drawable/ic_row_folder"
-            android:text="@string/move_to" />
 
         <TextView
             android:id="@+id/sheetDetails"
