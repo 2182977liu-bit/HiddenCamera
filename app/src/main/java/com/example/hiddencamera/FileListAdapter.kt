@@ -6,11 +6,12 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.hiddencamera.databinding.ItemDateHeaderBinding
 import com.example.hiddencamera.databinding.ItemFileBinding
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 /**
- * 文件列表适配器：行内嵌日期分组头。
- * [items] 为扁平列表，元素可能是 [GroupHeader] 或 [VideoFile]。
+ * 文件列表适配器：行内嵌日期分组头，含缩略图。
  */
 class FileListAdapter(
     private val onSelect: (VideoFile) -> Unit,
@@ -24,6 +25,7 @@ class FileListAdapter(
 
     private val items = mutableListOf<Item>()
     private val selected = mutableSetOf<Long>()
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     fun submit(list: List<Item>) {
         items.clear()
@@ -84,7 +86,18 @@ class FileListAdapter(
         fun bind(file: VideoFile) {
             binding.tvTitle.text = file.name
             binding.tvSub.text = formatSub(file)
-            binding.tvDuration.text = formatDuration(file.durationMs)
+
+            // 缩略图（视频第一帧 / 图片缩放）
+            ThumbnailLoader.load(file.file, binding.ivThumb)
+
+            // 截图没有时长，隐藏时长徽标
+            if (file.durationMs > 0) {
+                binding.tvDuration.visibility = View.VISIBLE
+                binding.tvDuration.text = formatDuration(file.durationMs)
+            } else {
+                binding.tvDuration.visibility = View.GONE
+            }
+
             binding.root.isSelected = isSelected(file.id)
             binding.checkbox.setImageResource(
                 if (isSelected(file.id)) R.drawable.ic_checkbox_checked else R.drawable.bg_checkbox_circle
@@ -102,14 +115,18 @@ class FileListAdapter(
 
     private fun formatDuration(ms: Long): String {
         val totalSec = ms / 1000
-        val m = totalSec / 60
+        val h = totalSec / 3600
+        val m = (totalSec % 3600) / 60
         val s = totalSec % 60
-        return String.format(Locale.US, "%02d:%02d", m, s)
+        return if (h > 0) String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
+        else String.format(Locale.US, "%02d:%02d", m, s)
     }
 
     private fun formatSub(file: VideoFile): String {
+        val time = timeFormat.format(Date(file.dateTaken))
         val sizeMb = file.sizeBytes / 1024f / 1024f
-        return String.format(Locale.US, "%.1f MB", sizeMb)
+        val base = String.format(Locale.US, "%s · %.1f MB", time, sizeMb)
+        return if (file.height > 0) "$base · ${file.height}p" else base
     }
 
     companion object {

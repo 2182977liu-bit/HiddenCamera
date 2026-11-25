@@ -1,16 +1,23 @@
 package com.example.hiddencamera
 
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.content.Context
 import android.os.Bundle
+import android.os.StatFs
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,11 +37,13 @@ class FilesFragment : Fragment() {
 
     private lateinit var adapter: FileListAdapter
     private var allFiles: List<VideoFile> = emptyList()
-    private var filter: Int = 0 // 0=全部 1=视频 2=截图（截图暂等同视频展示）
+    private var filter: Int = 0 // 0=全部 1=视频 2=截图
+    private var sortBySize = false
+    private var searchQuery = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
-        container: ViewGroup?,
+        container: ViewGroup,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentFilesBinding.inflate(inflater, container, false)
@@ -53,6 +62,14 @@ class FilesFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         loadFiles()
+    }
+
+    /** 切回本 Tab 时刷新（hide/show 不走 onResume） */
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && _binding != null) {
+            loadFiles()
+        }
     }
 
     override fun onDestroyView() {
@@ -89,14 +106,11 @@ class FilesFragment : Fragment() {
     }
 
     private fun setupToolbarActions() {
-        binding.btnSearch.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.search, Toast.LENGTH_SHORT).show()
-        }
-        binding.btnViewToggle.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.toggle_view, Toast.LENGTH_SHORT).show()
-        }
+        binding.btnSearch.setOnClickListener { showSearchDialog() }
         binding.btnSort.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.sort_newest, Toast.LENGTH_SHORT).show()
+            sortBySize = !sortBySize
+            binding.btnSort.setText(if (sortBySize) R.string.sort_largest else R.string.sort_newest)
+            renderList()
         }
 
         binding.btnSelectAll.setOnClickListener {
@@ -104,40 +118,58 @@ class FilesFragment : Fragment() {
             adapter.selectAll(ids)
             updateMultiBar()
         }
-        binding.btnShare.setOnClickListener { shareSelected() }
-        binding.btnMerge.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.merge, Toast.LENGTH_SHORT).show()
-        }
+        binding.btnShare.setOnClickListener { shareFiles(getVisibleFilesForSelection()) }
         binding.btnDelete.setOnClickListener { deleteSelected(getVisibleFilesForSelection()) }
     }
 
+    private fun showSearchDialog() {
+        val ctx = requireContext()
+        val input = EditText(ctx).apply {
+            hint = getString(R.string.search_hint)
+            setText(searchQuery)
+            setSingleLine()
+        }
+        AlertDialog.Builder(ctx)
+            .setTitle(R.string.search_title)
+            .setView(input)
+            .setPositiveButton(R.string.search) { _, _ ->
+                searchQuery = input.text.toString().trim()
+                renderList()
+            }
+            .setNeutralButton(R.string.search_clear) { _, _ ->
+                searchQuery = ""
+                renderList()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun setupSheetActions() {
+        binding.sheetScrim.setOnClickListener { hideSheet() }
         binding.sheetCancel.setOnClickListener { hideSheet() }
         binding.sheetPlay.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.play, Toast.LENGTH_SHORT).show()
+            sheetFile?.let { playFile(it) }
             hideSheet()
         }
         binding.sheetShare.setOnClickListener {
-            shareSelected()
+            val file = sheetFile
+            if (file != null) {
+                val selected = getVisibleFilesForSelection()
+                shareFiles(if (selected.isNotEmpty()) selected else listOf(file))
+            }
             hideSheet()
         }
         binding.sheetRename.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.rename, Toast.LENGTH_SHORT).show()
-            hideSheet()
-        }
-        binding.sheetMove.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.move_to, Toast.LENGTH_SHORT).show()
+            sheetFile?.let { showRenameDialog(it) }
             hideSheet()
         }
         binding.sheetDetails.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.details, Toast.LENGTH_SHORT).show()
+            sheetFile?.let { showDetails(it) }
             hideSheet()
         }
         binding.sheetDelete.setOnClickListener {
             val file = sheetFile
             if (file != null) {
-                adapter.setSelected(file.id, true)
-                updateMultiBar()
                 deleteSelected(listOf(file))
             }
             hideSheet()
@@ -149,10 +181,12 @@ class FilesFragment : Fragment() {
     private fun openSheet(file: VideoFile) {
         sheetFile = file
         binding.sheetFilename.text = file.name
+        binding.sheetScrim.visibility = View.VISIBLE
         binding.bottomSheet.visibility = View.VISIBLE
     }
 
     private fun hideSheet() {
+        binding.sheetScrim.visibility = View.GONE
         binding.bottomSheet.visibility = View.GONE
     }
 
@@ -172,10 +206,17 @@ class FilesFragment : Fragment() {
         }
     }
 
-    private fun currentItems(): List<VideoFile> = when (filter) {
-        1 -> allFiles.filter { isVideoFile(it.name) }
-        2 -> allFiles.filter { isImageFile(it.name) }
-        else -> allFiles
+    private fun currentItems(): List<VideoFile> {
+        var list = when (filter) {
+            1 -> allFiles.filter { isVideoFile(it.name) }
+            2 -> allFiles.filter { isImageFile(it.name) }
+            else -> allFiles
+        }
+        if (searchQuery.isNotEmpty()) {
+            list = list.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        }
+        return if (sortBySize) list.sortedByDescending { it.sizeBytes }
+        else list.sortedByDescending { it.dateTaken }
     }
 
     private fun isVideoFile(name: String): Boolean {
@@ -193,18 +234,138 @@ class FilesFragment : Fragment() {
     private fun getVisibleFilesForSelection(): List<VideoFile> =
         currentItems().filter { adapter.isSelected(it.id) }
 
-    private fun shareSelected() {
-        val files = getVisibleFilesForSelection()
-        if (files.isEmpty()) return
-        Toast.makeText(requireContext(), getString(R.string.share), Toast.LENGTH_SHORT).show()
+    // ===== 播放 / 分享（FileProvider 授权，旧实现只有 Toast） =====
+
+    private fun contentUri(file: File): Uri =
+        FileProvider.getUriForFile(requireContext(), "${requireContext().packageName}.fileprovider", file)
+
+    private fun playFile(vf: VideoFile) {
+        try {
+            val uri = contentUri(vf.file)
+            val type = if (isImageFile(vf.name)) "image/*" else "video/*"
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, type)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(requireContext(), R.string.no_player, Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(requireContext(), R.string.no_player, Toast.LENGTH_SHORT).show()
+        }
     }
+
+    private fun shareFiles(files: List<VideoFile>) {
+        if (files.isEmpty()) return
+        val ctx = requireContext()
+        val uris = ArrayList<Uri>()
+        for (vf in files) {
+            try {
+                uris.add(contentUri(vf.file))
+            } catch (_: Exception) {}
+        }
+        if (uris.isEmpty()) {
+            Toast.makeText(ctx, R.string.share_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val allImages = files.all { isImageFile(it.name) }
+        val allVideos = files.all { isVideoFile(it.name) }
+        val type = when {
+            allImages -> "image/*"
+            allVideos -> "video/*"
+            else -> "*/*"
+        }
+        val intent = if (uris.size == 1) {
+            Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris[0]) }
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply { putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris) }
+        }
+        intent.type = type
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            startActivity(Intent.createChooser(intent, getString(R.string.share)))
+        } catch (_: Exception) {
+            Toast.makeText(ctx, R.string.share_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ===== 重命名 / 详情 =====
+
+    private fun showRenameDialog(vf: VideoFile) {
+        val ctx = requireContext()
+        val input = EditText(ctx).apply {
+            setText(vf.name)
+            setSingleLine()
+        }
+        AlertDialog.Builder(ctx)
+            .setTitle(R.string.rename_title)
+            .setView(input)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isEmpty() || newName.contains('/') || newName.contains('\\')) {
+                    Toast.makeText(ctx, R.string.rename_failed, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val target = File(vf.file.parentFile, newName)
+                if (target.exists()) {
+                    Toast.makeText(ctx, R.string.rename_exists, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val ok = try { vf.file.renameTo(target) } catch (_: Exception) { false }
+                Toast.makeText(
+                    ctx,
+                    if (ok) R.string.rename_success else R.string.rename_failed,
+                    Toast.LENGTH_SHORT
+                ).show()
+                if (ok) loadFiles()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showDetails(vf: VideoFile) {
+        val ctx = requireContext()
+        val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(java.util.Date(vf.dateTaken))
+        val size = String.format(Locale.US, "%.1f MB", vf.sizeBytes / 1048576f)
+        val duration = formatDuration(vf.durationMs)
+        val resolution = if (vf.width > 0 && vf.height > 0) "${vf.width}x${vf.height}" else "-"
+        val message = buildString {
+            append("名称：${vf.name}\n")
+            append("大小：$size\n")
+            if (isVideoFile(vf.name)) {
+                append("时长：$duration\n")
+                append("分辨率：$resolution\n")
+            }
+            append("时间：$time\n")
+            append("路径：${vf.file.absolutePath}")
+        }
+        AlertDialog.Builder(ctx)
+            .setTitle(R.string.details_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.copy_path) { _, _ ->
+                val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("path", vf.file.absolutePath))
+                Toast.makeText(ctx, R.string.path_copied, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // ===== 删除 =====
 
     private fun deleteSelected(files: List<VideoFile>) {
         if (files.isEmpty()) return
+        // 正在写入的文件不能删，否则视频损坏
+        val activePath = (activity as? MainActivity)?.currentRecordingFile()?.absolutePath
+        val deletable = files.filter { it.file.absolutePath != activePath }
+        if (deletable.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.delete_skip_active, Toast.LENGTH_SHORT).show()
+            return
+        }
         AlertDialog.Builder(requireContext())
-            .setMessage(getString(R.string.delete_confirm, files.size))
+            .setMessage(getString(R.string.delete_confirm, deletable.size))
             .setPositiveButton(R.string.delete) { _, _ ->
-                doDelete(files)
+                doDelete(deletable)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -229,12 +390,11 @@ class FilesFragment : Fragment() {
         }
     }
 
-    // ===== MediaStore 扫描 =====
+    // ===== 目录扫描（直接扫文件系统，不受 .nomedia 影响） =====
     private fun loadFiles() {
-        // 先在主线程捕获 attachment 上的 context，避免 Fragment 销毁后 requireContext() 抛异常
         val ctx = requireContext()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val files = scanVideos(ctx)
+            val files = scanMedia(ctx)
             withContext(Dispatchers.Main) {
                 if (_binding == null) return@withContext
                 allFiles = files
@@ -243,25 +403,38 @@ class FilesFragment : Fragment() {
         }
     }
 
-    private fun scanVideos(ctx: Context): List<VideoFile> {
+    private fun scanMedia(ctx: Context): List<VideoFile> {
         val dir = RecordingService.getOutputDir()
         if (!dir.exists() || !dir.isDirectory) return emptyList()
 
-        val files = dir.listFiles()?.filter { it.isFile && isVideoFile(it.name) } ?: return emptyList()
+        val files = dir.listFiles()?.filter {
+            it.isFile && (isVideoFile(it.name) || isImageFile(it.name))
+        } ?: return emptyList()
         val now = System.currentTimeMillis()
 
         return files.mapNotNull { f ->
             try {
                 val dateTaken = f.lastModified().takeIf { it > 0 } ?: now
+                var duration = 0L
+                var width = 0
+                var height = 0
+                if (isVideoFile(f.name)) {
+                    val meta = videoMeta(f)
+                    duration = meta.first
+                    width = meta.second
+                    height = meta.third
+                }
                 VideoFile(
                     id = f.path.hashCode().toLong(),
                     uri = Uri.fromFile(f),
                     name = f.name,
                     sizeBytes = f.length(),
-                    durationMs = videoDurationMs(f),
+                    durationMs = duration,
                     dateTaken = dateTaken,
                     groupKey = groupKeyFor(dateTaken),
-                    file = f
+                    file = f,
+                    width = width,
+                    height = height
                 )
             } catch (_: Exception) {
                 null
@@ -269,18 +442,19 @@ class FilesFragment : Fragment() {
         }.sortedByDescending { it.dateTaken }
     }
 
-    /** 读取视频时长（毫秒） */
-    private fun videoDurationMs(file: File): Long {
+    /** 读取视频时长与分辨率 */
+    private fun videoMeta(file: File): Triple<Long, Int, Int> {
+        val retriever = MediaMetadataRetriever()
         return try {
-            val retriever = MediaMetadataRetriever()
             retriever.setDataSource(file.absolutePath)
-            val ms = retriever.extractMetadata(
-                MediaMetadataRetriever.METADATA_KEY_DURATION
-            )?.toLongOrNull() ?: 0L
-            retriever.release()
-            ms
+            val ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            val w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+            val h = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+            Triple(ms, w, h)
         } catch (_: Exception) {
-            0L
+            Triple(0L, 0, 0)
+        } finally {
+            try { retriever.release() } catch (_: Exception) {}
         }
     }
 
@@ -314,12 +488,11 @@ class FilesFragment : Fragment() {
 
         val flat = mutableListOf<FileListAdapter.Item>()
         var lastKey: String? = null
-        val seen = mutableSetOf<String>()
         for (file in visible) {
-            if (file.groupKey != lastKey) {
+            // 按大小排序时不插入日期头
+            if (!sortBySize && file.groupKey != lastKey) {
                 flat.add(FileListAdapter.Item.Header(groupLabel(file.groupKey)))
                 lastKey = file.groupKey
-                seen.add(file.groupKey)
             }
             flat.add(FileListAdapter.Item.FileItem(file))
         }
@@ -330,14 +503,13 @@ class FilesFragment : Fragment() {
     private fun updateStorageSummary(files: List<VideoFile>) {
         val totalBytes = files.sumOf { it.sizeBytes }
         val totalDuration = files.sumOf { it.durationMs }
-        // 使用已存在的标准公共目录做 StatFs，避免对不存在的子目录调用抛异常导致闪退
         val path = android.os.Environment.getExternalStoragePublicDirectory(
             android.os.Environment.DIRECTORY_DOWNLOADS
         ).absolutePath
         var totalSpace: Long = 0L
         var freeSpace: Long = 0L
         try {
-            val stat = android.os.StatFs(path)
+            val stat = StatFs(path)
             totalSpace = stat.totalBytes
             freeSpace = stat.availableBytes
         } catch (_: Exception) {
@@ -347,14 +519,29 @@ class FilesFragment : Fragment() {
 
         binding.tvStorageValue.text =
             String.format(Locale.US, "%.1f GB / %.1f GB", used / 1e9, totalSpace / 1e9)
-        binding.storageBarFill.layoutParams = binding.storageBarFill.layoutParams.apply {
-            width = if (totalSpace > 0)
+        // 等布局完成后再取宽度，修复首次进入进度条永远为 0 的问题
+        binding.storageBar.post {
+            if (_binding == null) return@post
+            val width = if (totalSpace > 0)
                 (binding.storageBar.width * (used.toFloat() / totalSpace)).toInt()
             else 0
+            binding.storageBarFill.layoutParams = binding.storageBarFill.layoutParams.apply {
+                this.width = width
+            }
+            binding.storageBarFill.requestLayout()
         }
         binding.tvFileCount.text = getString(R.string.file_count, files.size)
         binding.tvTotalDurationInfo.text = String.format(Locale.US, "%.1f 小时", totalDuration / 3.6e6)
         binding.tvRemainingInfo.text =
             String.format(Locale.US, "剩余 %.1f GB", freeSpace / 1e9)
+    }
+
+    private fun formatDuration(ms: Long): String {
+        val totalSec = ms / 1000
+        val h = totalSec / 3600
+        val m = (totalSec % 3600) / 60
+        val s = totalSec % 60
+        return if (h > 0) String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
+        else String.format(Locale.US, "%02d:%02d", m, s)
     }
 }
