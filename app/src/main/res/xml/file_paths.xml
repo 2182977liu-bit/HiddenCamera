@@ -9,4 +9,9 @@
     <files-path
         name="internal_files"
         path="." />
+    <!-- 公共 Download/xcodx 目录：播放/分享必须经 FileProvider 授权，
+         旧配置缺少该路径导致 getUriForFile 抛异常 -->
+    <external-path
+        name="public_downloads"
+        path="Download/xcodx/" />
 </paths>

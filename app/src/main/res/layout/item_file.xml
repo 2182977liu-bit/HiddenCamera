@@ -21,10 +21,20 @@
         android:gravity="center">
 
         <ImageView
+            android:id="@+id/ivThumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
+        <ImageView
             android:layout_width="18dp"
             android:layout_height="18dp"
+            android:layout_gravity="center"
             android:src="@drawable/ic_play"
-            android:tint="@color/ink_3" />
+            android:tint="@color/ink_3"
+            android:contentDescription="@null" />
 
         <TextView
             android:id="@+id/tvDuration"
@@ -60,7 +70,7 @@
             android:textColor="@color/ink"
             android:textSize="13sp"
             android:textStyle="bold"
-            tools:text="屏幕录制_20260814_143022" />
+            tools:text="VID_20260814_143022_123" />
 
         <TextView
             android:id="@+id/tvSub"
