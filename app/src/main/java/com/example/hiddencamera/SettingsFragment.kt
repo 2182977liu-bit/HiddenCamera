@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,7 +14,6 @@ import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.fragment.app.Fragment
 import com.example.hiddencamera.databinding.FragmentSettingsBinding
 import com.google.android.material.slider.Slider
@@ -25,7 +25,7 @@ class SettingsFragment : Fragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,
-        container: ViewGroup,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -237,7 +237,7 @@ class SettingsFragment : Fragment() {
             }
             val info = ShortcutInfo.Builder(ctx, "quick_record")
                 .setShortLabel(getString(R.string.one_tap_record))
-                .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
+                .setIcon(Icon.createWithResource(ctx, R.mipmap.ic_launcher))
                 .setIntent(intent)
                 .build()
             sm.requestPinShortcut(info, null)
