@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,8 +30,15 @@ jobs:
     # Release 包：开启混淆与资源裁剪，体积更小；使用 debug 签名可直接安装
     - name: Build Release APK
       run: |
-        ./gradlew assembleRelease --no-daemon 2>&1 | tee build.log
+        ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
         exit ${PIPESTATUS[0]}
+
+    # 输出实际包体积，便于核对瘦身效果
+    - name: Report APK size
+      if: success()
+      run: |
+        ls -l app/build/outputs/apk/release/*.apk
+        du -h app/build/outputs/apk/release/*.apk
 
     - name: Upload APK
       if: success()
