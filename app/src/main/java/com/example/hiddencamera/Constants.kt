@@ -10,18 +10,10 @@ object Constants {
     const val ACTION_STOP = "ACTION_STOP"
     /** Intent Action: 切换录制状态 */
     const val ACTION_TOGGLE = "ACTION_TOGGLE"
+    /** Intent Action: 切换摄像头（停止当前录制并自动用新摄像头重新开始） */
+    const val ACTION_SWITCH_CAMERA = "ACTION_SWITCH_CAMERA"
     /** 桌面快捷方式 Action */
     const val ACTION_QUICK_TOGGLE = "com.example.hiddencamera.ACTION_TOGGLE_RECORDING"
-
-    /** 广播: 录制开始 */
-    const val BROADCAST_RECORDING_STARTED = "com.example.hiddencamera.RECORDING_STARTED"
-    /** 广播: 录制停止 */
-    const val BROADCAST_RECORDING_STOPPED = "com.example.hiddencamera.RECORDING_STOPPED"
-    /** 广播: 录制错误 */
-    const val BROADCAST_RECORDING_ERROR = "com.example.hiddencamera.RECORDING_ERROR"
-
-    /** Intent Extra: 错误消息 */
-    const val EXTRA_ERROR_MESSAGE = "error_message"
 
     /** 通知 Channel ID */
     const val NOTIFICATION_CHANNEL_ID = "recording_channel"
@@ -37,14 +29,14 @@ object Constants {
     /** 最小可用存储空间（字节）：100 MB */
     const val MIN_FREE_SPACE_BYTES = 100L * 1024 * 1024
 
-    /** 分段录制时长（毫秒）：10 分钟 */
-    const val SEGMENT_DURATION_MS = 10L * 60 * 1000
-
     /** 视频输出目录名 */
     const val OUTPUT_DIR_NAME = "xcodx"
 
     /** 视频文件名前缀 */
     const val VIDEO_FILE_PREFIX = "VID_"
+
+    /** 截图文件名前缀 */
+    const val IMAGE_FILE_PREFIX = "IMG_"
 
     /** 时间戳格式 */
     const val TIMESTAMP_FORMAT = "yyyyMMdd_HHmmss_SSS"

@@ -17,12 +17,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.hiddencamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -149,7 +149,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        PhoneCallDetector.stop()
         if (serviceBound) {
             try { unbindService(serviceConnection) } catch (_: Exception) {}
             serviceBound = false
@@ -227,6 +226,24 @@ class MainActivity : AppCompatActivity() {
     fun currentIsRecording(): Boolean = viewModel.uiState.value.isRecording
     fun currentIsStopping(): Boolean = viewModel.uiState.value.isStopping
 
+    /** 当前正在写入的文件（用于显示大小 / 防止误删） */
+    fun currentRecordingFile(): File? = recordingService?.currentFile()
+
+    /** 切换摄像头：由服务在停止当前文件后自动重启，避免固定延时竞态 */
+    fun switchCamera() {
+        val serviceIntent = Intent(this, RecordingService::class.java).apply {
+            action = Constants.ACTION_SWITCH_CAMERA
+        }
+        try {
+            startService(serviceIntent)
+        } catch (_: Exception) {}
+    }
+
+    fun toggleTorch(): Boolean = recordingService?.toggleTorch() ?: false
+    fun isTorchOn(): Boolean = recordingService?.isTorchOn ?: false
+    fun togglePause(): Boolean = recordingService?.togglePause() ?: false
+    fun isPaused(): Boolean = recordingService?.isPaused ?: false
+
     fun startRecording() {
         checkPermissionsAndStart()
     }
@@ -235,8 +252,17 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, RecordingService::class.java).apply {
             action = Constants.ACTION_STOP
         }
-        startService(serviceIntent)
-        Toast.makeText(this, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
+        // 用 startForegroundService：App 在后台（如息屏来电）时 startService 会抛异常
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+            Toast.makeText(this, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.start_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun checkPermissionsAndStart() {
@@ -319,19 +345,6 @@ class MainActivity : AppCompatActivity() {
                 startService(serviceIntent)
             }
             Toast.makeText(this, R.string.recording_started, Toast.LENGTH_SHORT).show()
-
-            PhoneCallDetector.start(this) {
-                runOnUiThread {
-                    if (viewModel.uiState.value.isRecording) {
-                        Toast.makeText(
-                            this,
-                            "检测到来电，自动停止录制",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        stopRecording()
-                    }
-                }
-            }
         } catch (e: Exception) {
             Toast.makeText(
                 this,

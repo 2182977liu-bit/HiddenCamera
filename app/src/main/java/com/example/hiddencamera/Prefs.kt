@@ -12,6 +12,8 @@ object Prefs {
     private const val KEY_NOTIFICATION_ACTION = "notification_action"
     private const val KEY_SHORTCUT_ENABLED = "shortcut_enabled"
     private const val KEY_BEAUTY_ENABLED = "beauty_enabled"
+    private const val KEY_AUDIO_ENABLED = "audio_enabled"
+    private const val KEY_CALL_STOP = "call_stop"
     private const val KEY_SKIN_SMOOTH = "skin_smooth"
     private const val KEY_SKIN_WHITEN = "skin_whiten"
     private const val KEY_SKIN_ROSY = "skin_rosy"
@@ -28,6 +30,8 @@ object Prefs {
     private const val DEFAULT_NOTIFICATION_ACTION = true
     private const val DEFAULT_SHORTCUT_ENABLED = true
     private const val DEFAULT_BEAUTY_ENABLED = false
+    private const val DEFAULT_AUDIO_ENABLED = true
+    private const val DEFAULT_CALL_STOP = true
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
@@ -73,6 +77,20 @@ object Prefs {
 
     fun setBeautyEnabled(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_BEAUTY_ENABLED, enabled).apply()
+
+    /** 是否录制声音（麦克风） */
+    fun isAudioEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_AUDIO_ENABLED, DEFAULT_AUDIO_ENABLED)
+
+    fun setAudioEnabled(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_AUDIO_ENABLED, enabled).apply()
+
+    /** 来电时是否自动停止录制 */
+    fun isCallStopEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CALL_STOP, DEFAULT_CALL_STOP)
+
+    fun setCallStopEnabled(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_CALL_STOP, enabled).apply()
 
     fun getSkinSmooth(context: Context): Int =
         prefs(context).getInt(KEY_SKIN_SMOOTH, 50)

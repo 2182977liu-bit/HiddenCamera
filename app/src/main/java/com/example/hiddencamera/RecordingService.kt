@@ -19,6 +19,7 @@ import android.os.StatFs
 import android.util.Log
 import android.util.Range
 import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.extensions.ExtensionMode
@@ -83,8 +84,18 @@ class RecordingService : Service(), LifecycleOwner {
     private var videoCapture: VideoCapture<Recorder>? = null
     private var previewUseCase: Preview? = null
     private var activeRecording: Recording? = null
+    private var camera: Camera? = null
 
     private var isStopping = false
+    /** 切换摄像头：当前录制停止后自动用新镜头重新开始 */
+    private var pendingRestart = false
+    /** 暂停状态（CameraX Recording.pause/resume） */
+    var isPaused = false
+        private set
+    /** 手电筒状态 */
+    var isTorchOn = false
+        private set
+
     private lateinit var cameraExecutor: ExecutorService
 
     private var extensionsManager: ExtensionsManager? = null
@@ -93,12 +104,16 @@ class RecordingService : Service(), LifecycleOwner {
     private var recordingStartTime = 0L
     private var currentOutputFile: File? = null
 
+    /** 当前正在写入的文件，供 UI 显示大小 / 防止误删 */
+    fun currentFile(): File? = currentOutputFile
+
     /** 录制期间持有的部分唤醒锁，防止息屏后 CPU 休眠/Doze 中断相机录制 */
     private var wakeLock: PowerManager.WakeLock? = null
 
     /** 最大时长 Runnable */
     private val maxDurationRunnable = Runnable {
         Log.d(TAG, "达到最大录制时长，自动停止")
+        updateNotification(false)
         requestStopRecording()
     }
 
@@ -107,8 +122,14 @@ class RecordingService : Service(), LifecycleOwner {
         if (isStopping) {
             Log.w(TAG, "Finalize 超时，强制清理")
             activeRecording = null
-            updateState(RecordingState.Idle)
-            cleanupAndStop()
+            if (pendingRestart) {
+                pendingRestart = false
+                updateState(RecordingState.Idle)
+                startRecording()
+            } else {
+                updateState(RecordingState.Idle)
+                cleanupAndStop()
+            }
         }
     }
 
@@ -125,6 +146,39 @@ class RecordingService : Service(), LifecycleOwner {
         previewUseCase?.setSurfaceProvider(sp)
     }
 
+    /** 切换手电筒；返回 false 表示当前摄像头无闪光灯或相机未就绪 */
+    fun toggleTorch(): Boolean {
+        val cam = camera ?: return false
+        if (!cam.cameraInfo.hasFlashUnit()) return false
+        isTorchOn = !isTorchOn
+        return try {
+            cam.cameraControl.enableTorch(isTorchOn)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "切换手电筒失败", e)
+            isTorchOn = false
+            false
+        }
+    }
+
+    /** 暂停/继续录制；返回 false 表示当前未在录制 */
+    fun togglePause(): Boolean {
+        val rec = activeRecording ?: return false
+        return try {
+            if (isPaused) {
+                rec.resume()
+                isPaused = false
+            } else {
+                rec.pause()
+                isPaused = true
+            }
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "暂停/继续失败", e)
+            false
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
@@ -134,10 +188,16 @@ class RecordingService : Service(), LifecycleOwner {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
-            when (intent?.action) {
+            val action = intent?.action
+            // 任何指令都先满足前台服务时限要求（startForegroundService 后 5 秒内必须 startForeground），
+            // 避免「存储不足直接 stopSelf」等路径触发 ForegroundServiceDidNotStartInTimeException
+            if (action != null) {
+                startForegroundNotification()
+            }
+            when (action) {
                 Constants.ACTION_START -> {
-                    if (isRecording) {
-                        Log.w(TAG, "已在录制中，忽略重复开始请求")
+                    if (isRecording || isStopping) {
+                        Log.w(TAG, "已在录制/停止中，忽略重复开始请求")
                         return START_NOT_STICKY
                     }
                     if (!hasEnoughStorage()) {
@@ -145,7 +205,6 @@ class RecordingService : Service(), LifecycleOwner {
                         safeStopSelf()
                         return START_NOT_STICKY
                     }
-                    startForegroundNotification()
                     lifecycleRegistry.currentState = Lifecycle.State.RESUMED
                     startRecording()
                     updateNotification(true)
@@ -164,16 +223,28 @@ class RecordingService : Service(), LifecycleOwner {
                     if (isRecording) {
                         updateNotification(false)
                         requestStopRecording()
+                    } else if (isStopping) {
+                        Log.w(TAG, "停止中，忽略切换请求")
                     } else {
                         if (!hasEnoughStorage()) {
                             updateState(RecordingState.Error("存储空间不足，请清理后重试"))
                             safeStopSelf()
                             return START_NOT_STICKY
                         }
-                        startForegroundNotification()
                         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
                         startRecording()
                         updateNotification(true)
+                    }
+                }
+                Constants.ACTION_SWITCH_CAMERA -> {
+                    if (isRecording && !isStopping) {
+                        // 先正常停止当前文件，Finalize 后自动用新镜头重新开始，
+                        // 替代 UI 层固定延时重启（旧实现有竞态，可能损坏视频）
+                        pendingRestart = true
+                        updateNotification(false)
+                        requestStopRecording()
+                    } else {
+                        Log.w(TAG, "未在录制，忽略切换摄像头请求")
                     }
                 }
             }
@@ -190,10 +261,12 @@ class RecordingService : Service(), LifecycleOwner {
         mainHandler.removeCallbacks(maxDurationRunnable)
         mainHandler.removeCallbacks(stopTimeoutRunnable)
 
+        PhoneCallDetector.stop()
         releaseWakeLock()
         activeRecording = null
         videoCapture = null
         previewUseCase = null
+        camera = null
         try {
             cameraProvider?.unbindAll()
         } catch (_: Exception) {}
@@ -274,41 +347,43 @@ class RecordingService : Service(), LifecycleOwner {
         return builder.build()
     }
 
-    private fun initExtensionsManager(provider: ProcessCameraProvider) {
-        val future: ListenableFuture<ExtensionsManager> =
-            ExtensionsManager.getInstanceAsync(this, provider)
-        future.addListener({
-            try {
-                extensionsManager = future.get()
-                val lensFacing = if (Prefs.getCameraLens(this) == "front") {
-                    CameraSelector.LENS_FACING_FRONT
-                } else {
-                    CameraSelector.LENS_FACING_BACK
-                }
-                val cameraSelector = CameraSelector.Builder()
-                    .requireLensFacing(lensFacing)
-                    .build()
+    /** 初始化美颜扩展；无论成功失败都会回调 onReady，避免旧实现「首次录制美颜必不生效」的竞态 */
+    private fun initExtensionsManager(provider: ProcessCameraProvider, onReady: () -> Unit) {
+        try {
+            val future: ListenableFuture<ExtensionsManager> =
+                ExtensionsManager.getInstanceAsync(this, provider)
+            future.addListener({
+                try {
+                    extensionsManager = future.get()
+                    val lensFacing = if (Prefs.getCameraLens(this) == "front") {
+                        CameraSelector.LENS_FACING_FRONT
+                    } else {
+                        CameraSelector.LENS_FACING_BACK
+                    }
+                    val cameraSelector = CameraSelector.Builder()
+                        .requireLensFacing(lensFacing)
+                        .build()
 
-                // CameraX 扩展仅支持 FACE_RETOUCH（美颜），不区分 Android 版本
-                val mode = ExtensionMode.FACE_RETOUCH
-
-                isExtensionAvailable = try {
-                    extensionsManager?.isExtensionAvailable(cameraSelector, mode) ?: false
+                    // CameraX 扩展仅支持 FACE_RETOUCH（美颜）
+                    val mode = ExtensionMode.FACE_RETOUCH
+                    isExtensionAvailable = try {
+                        extensionsManager?.isExtensionAvailable(cameraSelector, mode) ?: false
+                    } catch (e: Exception) {
+                        Log.w(TAG, "检查扩展可用性失败", e)
+                        false
+                    }
+                    Log.d(TAG, "美颜扩展可用: $isExtensionAvailable")
                 } catch (e: Exception) {
-                    Log.w(TAG, "检查扩展可用性失败", e)
-                    false
+                    Log.w(TAG, "初始化 ExtensionsManager 失败", e)
+                    isExtensionAvailable = false
                 }
-
-                if (isExtensionAvailable) {
-                    Log.d(TAG, "美颜扩展可用: $mode")
-                } else {
-                    Log.d(TAG, "美颜扩展不可用，将使用回退方案")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "初始化 ExtensionsManager 失败", e)
-                isExtensionAvailable = false
-            }
-        }, ContextCompat.getMainExecutor(this))
+                onReady()
+            }, ContextCompat.getMainExecutor(this))
+        } catch (e: Exception) {
+            Log.w(TAG, "ExtensionsManager.getInstanceAsync 失败", e)
+            isExtensionAvailable = false
+            onReady()
+        }
     }
 
     private fun buildCameraSelector(lensFacing: Int): CameraSelector {
@@ -320,9 +395,7 @@ class RecordingService : Service(), LifecycleOwner {
             return baseSelector
         }
 
-        // CameraX 扩展仅支持 FACE_RETOUCH（美颜）
         val mode = ExtensionMode.FACE_RETOUCH
-
         return try {
             extensionsManager!!.getExtensionEnabledCameraSelector(baseSelector, mode)
         } catch (e: Exception) {
@@ -334,16 +407,18 @@ class RecordingService : Service(), LifecycleOwner {
     private fun startRecording() {
         try {
             acquireWakeLock()
+            isPaused = false
+            isTorchOn = false
             val outputDir = getOutputDir()
             if (!outputDir.exists()) {
                 val created = outputDir.mkdirs()
                 if (!created) {
-                    updateState(RecordingState.Error("无法创建存储目录: ${outputDir.absolutePath}"))
+                    handleStartupFailure("无法创建存储目录: ${outputDir.absolutePath}")
                     return
                 }
             }
 
-            // 隐藏录制画面：在目录放置 .nomedia，阻止 MediaStore 索引，视频不出现在系统相册
+            // 在目录放置 .nomedia，阻止系统相册扫描（文件页直接扫目录，不受影响）
             try {
                 val nomediaFile = File(outputDir, ".nomedia")
                 if (!nomediaFile.exists()) {
@@ -365,26 +440,30 @@ class RecordingService : Service(), LifecycleOwner {
                     future.addListener({
                         try {
                             cameraProvider = future.get()
-                            initExtensionsManager(cameraProvider!!)
-                            bindCameraUseCases(outputFile)
+                            initExtensionsManager(cameraProvider!!) {
+                                bindCameraUseCases(outputFile)
+                            }
                         } catch (e: Exception) {
                             Log.e(TAG, "获取 CameraProvider 失败", e)
-                            updateState(RecordingState.Error("相机初始化失败: ${e.message}"))
+                            handleStartupFailure("相机初始化失败: ${e.message}")
                         }
                     }, ContextCompat.getMainExecutor(this))
                 } catch (e: Exception) {
                     Log.e(TAG, "ProcessCameraProvider.getInstance 失败", e)
-                    updateState(RecordingState.Error("相机初始化失败: ${e.message}"))
+                    handleStartupFailure("相机初始化失败: ${e.message}")
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "startRecording 异常", e)
-            updateState(RecordingState.Error("启动录制失败: ${e.message}"))
+            handleStartupFailure("启动录制失败: ${e.message}")
         }
     }
 
     private fun bindCameraUseCases(outputFile: File) {
-        val provider = cameraProvider ?: return
+        val provider = cameraProvider ?: run {
+            handleStartupFailure("相机未就绪")
+            return
+        }
         provider.unbindAll()
 
         val lensFacing = if (Prefs.getCameraLens(this) == "front") {
@@ -414,8 +493,6 @@ class RecordingService : Service(), LifecycleOwner {
             .build()
 
         val videoCaptureBuilder = VideoCapture.Builder(recorder)
-        // 注意：CameraX VideoCapture 不支持 setMaxVideoDuration，
-        // 最大录制时长通过 Handler.postDelayed 在 startVideoCapture 中保底触发。
 
         if (targetFps > 0) {
             try {
@@ -441,7 +518,7 @@ class RecordingService : Service(), LifecycleOwner {
         previewUseCase = preview
 
         try {
-            if (preview != null) {
+            camera = if (preview != null) {
                 provider.bindToLifecycle(this, cameraSelector, preview, videoCapture)
             } else {
                 provider.bindToLifecycle(this, cameraSelector, videoCapture)
@@ -449,34 +526,35 @@ class RecordingService : Service(), LifecycleOwner {
             startVideoCapture(outputFile)
         } catch (e: Exception) {
             Log.e(TAG, "绑定相机失败", e)
-            updateState(RecordingState.Error("绑定相机失败: ${e.message}"))
+            handleStartupFailure("绑定相机失败: ${e.message}")
         }
     }
 
     private fun startVideoCapture(outputFile: File) {
-        val capture = videoCapture ?: return
+        val capture = videoCapture ?: run {
+            handleStartupFailure("录制器未就绪")
+            return
+        }
 
         val outputOptions = FileOutputOptions.Builder(outputFile).build()
 
         activeRecording = capture.output
             .prepareRecording(this, outputOptions)
             .apply {
-                // 先检查录音权限，避免 withAudioEnabled 抛出 IllegalStateException
+                // 先检查录音权限与用户开关，避免 withAudioEnabled 抛出异常
                 val hasAudioPermission = ContextCompat.checkSelfPermission(
                     this@RecordingService,
                     Manifest.permission.RECORD_AUDIO
                 ) == PackageManager.PERMISSION_GRANTED
 
-                if (hasAudioPermission) {
+                if (hasAudioPermission && Prefs.isAudioEnabled(this@RecordingService)) {
                     try {
                         withAudioEnabled()
                     } catch (e: Exception) {
-                        // 捕获所有异常（IllegalStateException/SecurityException 等），
-                        // 音频失败时降级为仅录制视频，不影响主流程
                         Log.w(TAG, "启用音频失败，仅录制视频", e)
                     }
                 } else {
-                    Log.w(TAG, "无录音权限，仅录制视频")
+                    Log.w(TAG, "录音关闭或无权限，仅录制视频")
                 }
             }
             .start(cameraExecutor) { event ->
@@ -484,15 +562,27 @@ class RecordingService : Service(), LifecycleOwner {
                     when (event) {
                         is VideoRecordEvent.Start -> {
                             recordingStartTime = System.currentTimeMillis()
+                            isPaused = false
                             updateState(RecordingState.Recording(recordingStartTime, outputFile))
-                            // 设置最大时长保底（防止 setMaxVideoDuration 不生效）
                             mainHandler.postDelayed(maxDurationRunnable, Constants.MAX_RECORDING_DURATION_MS)
+                            // 来电自动停止（可在设置中关闭）
+                            if (Prefs.isCallStopEnabled(this)) {
+                                PhoneCallDetector.start(this) {
+                                    mainHandler.post {
+                                        if (isRecording) {
+                                            Log.d(TAG, "来电，自动停止录制")
+                                            updateNotification(false)
+                                            requestStopRecording()
+                                        }
+                                    }
+                                }
+                            }
                             Log.d(TAG, "录制开始: ${outputFile.absolutePath}")
                         }
                         is VideoRecordEvent.Finalize -> {
-                            // 移除最大时长回调
                             mainHandler.removeCallbacks(maxDurationRunnable)
                             mainHandler.removeCallbacks(stopTimeoutRunnable)
+                            PhoneCallDetector.stop()
 
                             if (event.hasError()) {
                                 val errorMsg = mapFinalizeError(event)
@@ -505,10 +595,14 @@ class RecordingService : Service(), LifecycleOwner {
                             activeRecording = null
                             currentOutputFile = null
 
-                            if (isStopping) {
-                                mainHandler.post {
-                                    cleanupAndStop()
-                                }
+                            if (pendingRestart) {
+                                // 切换摄像头：用新镜头立即开始下一段
+                                pendingRestart = false
+                                mainHandler.post { startRecording() }
+                            } else {
+                                // 无论是手动停止还是异常结束，都清理相机并停止服务，
+                                // 修复旧实现「异常结束后前台通知/唤醒锁/相机一直占用」的问题
+                                mainHandler.post { cleanupAndStop() }
                             }
                         }
                     }
@@ -519,15 +613,21 @@ class RecordingService : Service(), LifecycleOwner {
     }
 
     private fun requestStopRecording() {
+        if (isStopping) return
         isStopping = true
-        // 移除最大时长回调（手动停止时无需触发）
         mainHandler.removeCallbacks(maxDurationRunnable)
-
-        // 更新状态为 Stopping，UI 可以显示加载态
         updateState(RecordingState.Stopping(currentOutputFile))
 
+        val rec = activeRecording
+        if (rec == null) {
+            // 没有进行中的录制（例如启动失败后点停止），直接清理
+            updateState(RecordingState.Idle)
+            cleanupAndStop()
+            return
+        }
+
         try {
-            activeRecording?.stop()
+            rec.stop()
         } catch (e: Exception) {
             Log.w(TAG, "停止录制时异常", e)
             activeRecording = null
@@ -536,18 +636,40 @@ class RecordingService : Service(), LifecycleOwner {
             return
         }
 
-        // 设置超时保底
         mainHandler.postDelayed(stopTimeoutRunnable, Constants.STOP_TIMEOUT_MS)
     }
 
+    /** 启动阶段失败：统一清理资源并停止服务，避免残留前台通知与唤醒锁 */
+    private fun handleStartupFailure(message: String) {
+        Log.e(TAG, message)
+        updateState(RecordingState.Error(message))
+        PhoneCallDetector.stop()
+        releaseWakeLock()
+        activeRecording = null
+        videoCapture = null
+        previewUseCase = null
+        camera = null
+        currentOutputFile = null
+        pendingRestart = false
+        isStopping = false
+        try {
+            cameraProvider?.unbindAll()
+        } catch (_: Exception) {}
+        cameraProvider = null
+        safeStopSelf()
+    }
+
     private fun cleanupAndStop() {
-        // 清理所有回调
         mainHandler.removeCallbacks(maxDurationRunnable)
         mainHandler.removeCallbacks(stopTimeoutRunnable)
 
+        PhoneCallDetector.stop()
         releaseWakeLock()
         videoCapture = null
         previewUseCase = null
+        camera = null
+        isPaused = false
+        isTorchOn = false
         try {
             cameraProvider?.unbindAll()
         } catch (e: Exception) {
